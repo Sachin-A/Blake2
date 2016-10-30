@@ -45,9 +45,39 @@ G(int64_t v[16], int a, int b, int c, int d, int64_t x, int64_t y)
   v[b] = rotr64(v[b] ^ v[c], 63);
 }
 
-void
-printblake(void)
-{
-  printf("Initial commit!\n");
-  return;
+static uint64_t*
+F( uint64_t h[], uint64_t m[], uint64_t t, uint64_t f ){
+  int i,j;
+  uint64_t v[16], s[16], w=64, k=(int)pow(2,w);
+  
+  for(i=0; i<8; ++i){
+  v[i]=h[i];
+  v[i+8]=blake2b_IV[i];
+  }
+  
+  v[12]=v[12] ^ ( t % k);
+  v[13]=v[13] ^ (t >> w);
+  if(f)
+    v[14]=~v[14];
+
+  
+  for(i=0; i<12; i++){
+    for(j=0; j<16; j++){
+      s[j] = blake2b_sigma[i % 10][j];
+    }
+    G( v, 0, 4,  8, 12, m[s[ 0]], m[s[ 1]] );
+    G( v, 1, 5,  9, 13, m[s[ 2]], m[s[ 3]] );
+    G( v, 2, 6, 10, 14, m[s[ 4]], m[s[ 5]] );
+    G( v, 3, 7, 11, 15, m[s[ 6]], m[s[ 7]] );
+    G( v, 0, 5, 10, 15, m[s[ 8]], m[s[ 9]] );
+    G( v, 1, 6, 11, 12, m[s[10]], m[s[11]] );
+    G( v, 2, 7,  8, 13, m[s[12]], m[s[13]] );
+    G( v, 3, 4,  9, 14, m[s[14]], m[s[15]] );
+  }
+
+  for(i=0; i<7; i++){
+    h[i] = h[i] ^ v[i] ^ v[i + 8];
+  }
+  return h;
 }
+
