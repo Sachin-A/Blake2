@@ -13,4 +13,4 @@ build/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm build/*.o $(out)
+	rm -f build/*.o *~ core  $(out)

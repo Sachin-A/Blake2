@@ -3,6 +3,5 @@
 int
 main()
 {
-  printblake();
   return 0;
 }
