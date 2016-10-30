@@ -23,6 +23,28 @@ static const uint8_t blake2b_sigma[12][16] = {
   { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 }
 };
 
+static uint64_t
+rotr64(const uint64_t w, const unsigned c)
+{
+  return (w >> c) | (w << (64 - c));
+}
+
+void
+G(int64_t v[16], int a, int b, int c, int d, int64_t x, int64_t y)
+{
+  v[a] = v[a] + v[b] + x;
+  v[d] = rotr64(v[d] ^ v[a], 32);
+
+  v[c] = v[c] + v[d];
+  v[b] = rotr64(v[b] ^ v[c], 24);
+
+  v[a] = v[a] + v[b] + y;
+  v[d] = rotr64(v[d] ^ v[a], 16);
+
+  v[c] = v[c] + v[d];
+  v[b] = rotr64(v[b] ^ v[c], 63);
+}
+
 void
 printblake(void)
 {
