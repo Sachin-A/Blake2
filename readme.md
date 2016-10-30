@@ -329,3 +329,4 @@ Given a 64-bit BLAKE2 instance such as BLAKE2b, BLAKE2X works as follows to comp
 
 - [BLAKE2X]   
   https://blake2.net/blake2x.pdf
+
