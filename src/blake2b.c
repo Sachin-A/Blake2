@@ -1,6 +1,8 @@
 #include "blake2b.h"
-int main()
+
+int
+main()
 {
-	printblake();
-	return 0;
+  printblake();
+  return 0;
 }

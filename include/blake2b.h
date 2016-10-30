@@ -1,6 +1,7 @@
 #ifndef BLAKE_H
 #define BLAKE_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 void printblake(void);
