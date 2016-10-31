@@ -52,7 +52,7 @@ static const uint32_t blake2s_IV[8] =
   0x510E527FUL, 0x9B05688CUL, 0x1F83D9ABUL, 0x5BE0CD19UL
 };
 
-static const uint8_t blake2s_SIGMA[10][16] =
+static const uint8_t blake2s_sigma[10][16] =
 {
   {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 } ,
   { 14, 10,  4,  8,  9, 15, 13,  6,  1, 12,  0,  2, 11,  7,  5,  3 } ,
@@ -65,3 +65,27 @@ static const uint8_t blake2s_SIGMA[10][16] =
   {  6, 15, 14,  9, 11,  3,  0,  8, 12,  2, 13,  7,  1,  4, 10,  5 } ,
   { 10,  2,  8,  4,  7,  6,  1,  5, 15, 11,  9, 14,  3, 12, 13 , 0 } ,
 };
+
+#define G(r,i,a,b,c,d)                      \
+  do {                                      \
+    a = a + b + m[blake2s_sigma[r][2*i+0]]; \
+    d = rotr32(d ^ a, 16);                  \
+    c = c + d;                              \
+    b = rotr32(b ^ c, 12);                  \
+    a = a + b + m[blake2s_sigma[r][2*i+1]]; \
+    d = rotr32(d ^ a, 8);                   \
+    c = c + d;                              \
+    b = rotr32(b ^ c, 7);                   \
+  } while(0)
+
+#define ROUND(r)                    \
+  do {                              \
+    G(r,0,v[ 0],v[ 4],v[ 8],v[12]); \
+    G(r,1,v[ 1],v[ 5],v[ 9],v[13]); \
+    G(r,2,v[ 2],v[ 6],v[10],v[14]); \
+    G(r,3,v[ 3],v[ 7],v[11],v[15]); \
+    G(r,4,v[ 0],v[ 5],v[10],v[15]); \
+    G(r,5,v[ 1],v[ 6],v[11],v[12]); \
+    G(r,6,v[ 2],v[ 7],v[ 8],v[13]); \
+    G(r,7,v[ 3],v[ 4],v[ 9],v[14]); \
+  } while(0)
