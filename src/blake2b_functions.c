@@ -80,3 +80,43 @@ F( uint64_t h[], uint64_t m[], uint64_t t[], uint64_t f ){
   }
   return h;
 }
+
+static void
+blake2(uint64_t d[], uint64_t ll, uint64_t kk, size_t nn){
+
+  size_t i;
+
+  uint64_t h[8], buff[nn], block[16];
+  uint64_t dd = ceil((double)(k) / (double)BLAKE2B_BLOCKBYTES) + ceil((double)l / (double)BLAKE2B_BLOCKBYTES);
+  uint64_t temp[dd*2];
+
+  memset(temp, 0, dd*128);
+  if(kk > 0)
+  	temp[0] = temp[0] ^ kk;
+  memcpy(temp+1, d, sizeof(d));
+
+  for(i = 0; i < 8; i++)
+      h[i] = blake2b_IV[i];
+
+  h[0] = h[0] ^ 0x01010000 ^ (kk << 8) ^ nn;
+
+
+  if(dd > 1)
+    for(i = 0; i < dd - 1; i++){
+      memcpy(block, temp, BLAKE2B_BLOCKBYTES);
+      *temp += (BLAKE2B_BLOCKBYTES/8);
+      F( h, block, (i + 1) * BLAKE2B_BLOCKBYTES, 0 );
+    }
+  *temp += (BLAKE2B_BLOCKBYTES/8);
+  memcpy(block, temp, BLAKE2B_BLOCKBYTES);
+
+  if(kk = 0){
+    F(h, block, ll, 1);
+  } else {
+    F(h, block, ll + BLAKE2B_BLOCKBYTES, 1);
+  }
+
+  memcpy(buff, h, nn);
+  return buff;
+
+}
