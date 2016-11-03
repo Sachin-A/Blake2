@@ -1,28 +1,32 @@
 #include "blake2b.h"
+#include "utils.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
 
 #define BUF_LENGTH 100
 
-int
-main(void)
+void
+print_hex(const uint8_t* s)
 {
-  uint8_t buf[BUF_LENGTH] = "";
+  printf("hash : ");
+  while (*s)
+    printf("%02x", *s++);
+  printf("\n");
+}
 
-  for (int i = 0; buf[i] != 0; i++)
-    printf("%" PRId8 "\n", buf[i]);
-
+int
+main(int argc, char const* argv[])
+{
+  uint8_t buf[BUF_LENGTH] = "00";
   uint8_t hash[BLAKE2B_OUTBYTES];
-
-  // for (i = 0; i < BUF_LENGTH; ++i)
-  //   buf[i] = (uint8_t)i;
 
   for (int i = 0; i < BUF_LENGTH; ++i) {
     blake2(hash, BLAKE2B_OUTBYTES, buf, i);
   }
 
-  for (int i = 0; i < BLAKE2B_OUTBYTES; i++)
-    printf("%" PRId8 "\n", hash[i]);
+  printf("input: %s\n", buf);
+  print_hex(hash);
 
   return 0;
 }

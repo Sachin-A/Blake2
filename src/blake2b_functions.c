@@ -8,16 +8,22 @@
 /**
  * @brief      Initializes blake2b_state
  *
- * @param      S     blake2b_struct nstance passed by reference
+ * @param      S     blake2b_struct instance
  */
 void
-blake2b_init(blake2b_state* S)
+blake2b_init(blake2b_state* S, size_t outlen)
 {
   size_t i;
+
   memset(S, 0, sizeof(blake2b_state));
   for (i = 0; i < 8; ++i)
     S->h[i] = blake2b_IV[i];
-  S->buflen = 0;
+  S->h[0] ^= 0x01010000 ^ outlen;
+  S->t[0] = 0;
+  S->t[1] = 0;
+  S->outlen = outlen;
+  for (i = 0; i < BLAKE2B_BLOCKBYTES; i++)
+    S->buf[i] = 0;
 }
 
 /**
@@ -131,13 +137,17 @@ blake2b_update(blake2b_state* S, const void* input_buffer, size_t inlen)
   return 0;
 }
 
-int blake2b_final(blake2b_state *S, void *out, size_t outlen) {
-  uint8_t buffer[BLAKE2B_OUTBYTES] = {0};
+int
+blake2b_final(blake2b_state* S, void* out, size_t outlen)
+{
+  uint8_t buffer[BLAKE2B_OUTBYTES] = { 0 };
   size_t i;
 
-  if (out == NULL || outlen < S->outlen) return -1;
+  if (out == NULL || outlen < S->outlen)
+    return -1;
 
-  if (blake2b_is_lastblock(S)) return -1;
+  if (blake2b_is_lastblock(S))
+    return -1;
 
   blake2b_increment_counter(S, S->buflen);
   blake2b_set_lastblock(S);
@@ -160,11 +170,11 @@ int blake2b_final(blake2b_state *S, void *out, size_t outlen) {
  * @param[in]  nn    Hash bytes
  */
 void
-blake2(void *output, size_t outlen, const void* input, size_t inlen)
+blake2(void* output, size_t outlen, const void* input, size_t inlen)
 {
   blake2b_state S[1];
-  blake2b_init(S);
-  blake2b_update(S, (const uint8_t *)input, inlen);
+  blake2b_init(S, outlen);
+  blake2b_update(S, (const uint8_t*)input, inlen);
   blake2b_final(S, output, outlen);
   // size_t i;
   // uint64_t h[8], buff[nn], block[16];
