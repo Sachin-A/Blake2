@@ -57,4 +57,6 @@ int blake2b_final(blake2b_state* S, void* out, size_t outlen);
 
 int blake2b(void* out, size_t outlen, const void* in, size_t inlen,
             const void* key, size_t keylen);
+void blake2(void* output, size_t outlen, const void* input, size_t inlen);
+
 #endif

@@ -17,6 +17,7 @@ blake2b_init(blake2b_state* S)
   memset(S, 0, sizeof(blake2b_state));
   for (i = 0; i < 8; ++i)
     S->h[i] = blake2b_IV[i];
+  S->buflen = 0;
 }
 
 /**
@@ -44,19 +45,14 @@ G(uint64_t v[16], int a, int b, int c, int d, int64_t x, int64_t y)
 }
 
 /**
- * @brief      The Compress function, F, takes a full 128-byte chunk of the
- *             input message and mixes it into the ongoing state array:
+ * @brief      The blake2b compress function which takes a full 128-byte chunk
+ *             of the input message and mixes it into the ongoing state array
  *
- *
- * @param      h     persistent state vector
- * @param      block 128-byte (16 word) chunk of message to compress
- * @param      t     Count of bytes that have been fed into the Compression
- * @param[in]  f     Indicates if this is the final round of compression
- *
- * @return     { description_of_the_return_value }
+ * @param      S      blake2b_state instance
+ * @param      block  The input block
  */
 static void
-F(uint64_t h[], uint8_t block[BLAKE2B_BLOCKBYTES], uint64_t t[], uint64_t f[])
+F(blake2b_state* S, uint8_t block[BLAKE2B_BLOCKBYTES])
 {
   size_t i, j;
   uint64_t v[16], m[16], s[16];
@@ -66,14 +62,14 @@ F(uint64_t h[], uint8_t block[BLAKE2B_BLOCKBYTES], uint64_t t[], uint64_t f[])
   }
 
   for (i = 0; i < 8; ++i) {
-    v[i] = h[i];
+    v[i] = S->h[i];
     v[i + 8] = blake2b_IV[i];
   }
 
-  v[12] ^= t[0];
-  v[13] ^= t[1];
-  v[14] ^= f[0];
-  v[15] ^= f[1];
+  v[12] ^= S->t[0];
+  v[13] ^= S->t[1];
+  v[14] ^= S->f[0];
+  v[15] ^= S->f[1];
 
   for (i = 0; i < 12; i++) {
     for (j = 0; j < 16; j++) {
@@ -90,8 +86,69 @@ F(uint64_t h[], uint8_t block[BLAKE2B_BLOCKBYTES], uint64_t t[], uint64_t f[])
   }
 
   for (i = 0; i < 8; i++) {
-    h[i] = h[i] ^ v[i] ^ v[i + 8];
+    S->h[i] = S->h[i] ^ v[i] ^ v[i + 8];
   }
+}
+
+/**
+ * @brief      Updates blake2b state
+ *
+ * @param      S      blake2b state instance
+ * @param[in]  input_buffer    The input buffer
+ * @param[in]  inlen  The input lenth
+ *
+ * @return     error code
+ */
+int
+blake2b_update(blake2b_state* S, const void* input_buffer, size_t inlen)
+{
+  unsigned char* in = (unsigned char*)input_buffer;
+  if (inlen == 0)
+    return 0;
+
+  size_t left = S->buflen;
+  size_t fill = BLAKE2B_BLOCKBYTES - left;
+
+  if (inlen > fill) {
+    S->buflen = 0;
+    memcpy(S->buf + left, in, fill); /* Fill buffer */
+    blake2b_increment_counter(S, BLAKE2B_BLOCKBYTES);
+    F(S, S->buf); /* Compress */
+    in += fill;
+    inlen -= fill;
+
+    while (inlen > BLAKE2B_BLOCKBYTES) {
+      blake2b_increment_counter(S, BLAKE2B_BLOCKBYTES);
+      F(S, in);
+      in += BLAKE2B_BLOCKBYTES;
+      inlen -= BLAKE2B_BLOCKBYTES;
+    }
+  }
+
+  memcpy(S->buf + S->buflen, in, inlen);
+  S->buflen += inlen;
+
+  return 0;
+}
+
+int blake2b_final(blake2b_state *S, void *out, size_t outlen) {
+  uint8_t buffer[BLAKE2B_OUTBYTES] = {0};
+  size_t i;
+
+  if (out == NULL || outlen < S->outlen) return -1;
+
+  if (blake2b_is_lastblock(S)) return -1;
+
+  blake2b_increment_counter(S, S->buflen);
+  blake2b_set_lastblock(S);
+  memset(S->buf + S->buflen, 0, BLAKE2B_BLOCKBYTES - S->buflen); /* Padding */
+  F(S, S->buf);
+
+  for (i = 0; i < 8; ++i) /* Output full hash to temp buffer */
+    store64(buffer + sizeof(S->h[i]) * i, S->h[i]);
+
+  memcpy(out, buffer, S->outlen);
+  return 0;
 }
 
 /**
@@ -102,43 +159,46 @@ F(uint64_t h[], uint8_t block[BLAKE2B_BLOCKBYTES], uint64_t t[], uint64_t f[])
  * @param[in]  kk    Key bytes
  * @param[in]  nn    Hash bytes
  */
-static uint64_t*
-blake2(uint64_t d[], uint64_t ll, uint64_t kk, size_t nn)
+void
+blake2(void *output, size_t outlen, const void* input, size_t inlen)
 {
+  blake2b_state S[1];
+  blake2b_init(S);
+  blake2b_update(S, (const uint8_t *)input, inlen);
+  blake2b_final(S, output, outlen);
+  // size_t i;
+  // uint64_t h[8], buff[nn], block[16];
+  // uint64_t dd = ceil((double)kk / (double)BLAKE2B_BLOCKBYTES) +
+  //               ceil((double)ll / (double)BLAKE2B_BLOCKBYTES);
+  // uint64_t temp[dd * 2];
 
-  size_t i;
-  uint64_t h[8], buff[nn], block[16];
-  uint64_t dd = ceil((double)kk / (double)BLAKE2B_BLOCKBYTES) +
-                ceil((double)ll / (double)BLAKE2B_BLOCKBYTES);
-  uint64_t temp[dd * 2];
+  // memset(temp, 0, dd * 128);
+  // if (kk > 0)
+  //   temp[0] = temp[0] ^ kk;
+  // memcpy(temp + 1, d, ll);
 
-  memset(temp, 0, dd * 128);
-  if (kk > 0)
-    temp[0] = temp[0] ^ kk;
-  memcpy(temp + 1, d, ll);
+  // for (i = 0; i < 8; i++)
+  //   h[i] = blake2b_IV[i];
 
-  for (i = 0; i < 8; i++)
-    h[i] = blake2b_IV[i];
+  // h[0] = h[0] ^ 0x01010000 ^ (kk << 8) ^ nn;
 
-  h[0] = h[0] ^ 0x01010000 ^ (kk << 8) ^ nn;
+  // if (dd > 1)
+  //   for (i = 0; i < dd - 1; i++) {
+  //     memcpy(block, temp, BLAKE2B_BLOCKBYTES);
+  //     *temp += (BLAKE2B_BLOCKBYTES / 8);
+  //     F(h, block, (i + 1) * BLAKE2B_BLOCKBYTES, 0);
+  //   }
+  // *temp += (BLAKE2B_BLOCKBYTES / 8);
+  // memcpy(block, temp, BLAKE2B_BLOCKBYTES);
 
-  if (dd > 1)
-    for (i = 0; i < dd - 1; i++) {
-      memcpy(block, temp, BLAKE2B_BLOCKBYTES);
-      *temp += (BLAKE2B_BLOCKBYTES / 8);
-      F(h, block, (i + 1) * BLAKE2B_BLOCKBYTES, 0);
-    }
-  *temp += (BLAKE2B_BLOCKBYTES / 8);
-  memcpy(block, temp, BLAKE2B_BLOCKBYTES);
+  // if (kk = 0) {
+  //   F(h, block, ll, 1);
+  // } else {
+  //   F(h, block, ll + BLAKE2B_BLOCKBYTES, 1);
+  // }
 
-  if (kk = 0) {
-    F(h, block, ll, 1);
-  } else {
-    F(h, block, ll + BLAKE2B_BLOCKBYTES, 1);
-  }
-
-  memcpy(buff, h, nn);
-  // return buff;
-  // Can't return array from function in C
-  // https://stackoverflow.com/questions/11656532/returning-an-array-using-c
+  // memcpy(buff, h, nn);
+  // // return buff;
+  // // Can't return array from function in C
+  // // https://stackoverflow.com/questions/11656532/returning-an-array-using-c
 }
