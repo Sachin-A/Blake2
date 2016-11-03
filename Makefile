@@ -1,16 +1,17 @@
 IDIR = include
-CFLAGS = -I $(IDIR) -Wall
+ODIR = build
+CFLAGS = -I $(IDIR) -Wall -lm
 CC = gcc
 
 src = $(wildcard src/*.c)
-obj = $(patsubst src/%.c, build/%.o, $(src))
+obj = $(patsubst src/%.c, $(ODIR)/%.o, $(src))
 out = blake2b
 
 blake: $(obj)
-	$(CC) $(obj) -o $(out)
+	$(CC) $(obj) -o $(out) $(CFLAGS)
 
-build/%.o: src/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+$(ODIR)/%.o: src/%.c
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	rm -f build/*.o *~ core  $(out)
+	rm -f $(ODIR)/*.o *~ core  $(out)
