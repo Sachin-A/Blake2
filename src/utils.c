@@ -61,6 +61,20 @@ store64(void* dst, uint64_t w)
 #endif
 }
 
+void
+store32(void* dst, uint32_t w)
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+  memcpy(dst, &w, sizeof w);
+#else
+  uint8_t* p = (uint8_t*)dst;
+  p[0] = (uint8_t)(w >> 0);
+  p[1] = (uint8_t)(w >> 8);
+  p[2] = (uint8_t)(w >> 16);
+  p[3] = (uint8_t)(w >> 24);
+#endif
+}
+
 /**
  * @brief      increments the blake2b state counter
  *
@@ -72,16 +86,4 @@ blake2b_increment_counter(blake2b_state* S, const uint64_t inc)
 {
   S->t[0] += inc;
   S->t[1] += (S->t[0] < inc);
-}
-
-int
-blake2b_is_lastblock(const blake2b_state* S)
-{
-  return S->f[0] != 0;
-}
-
-void
-blake2b_set_lastblock(blake2b_state* S)
-{
-  S->f[0] = (uint64_t)-1;
 }

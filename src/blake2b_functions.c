@@ -6,27 +6,6 @@
 #include <string.h>
 
 /**
- * @brief      Initializes blake2b_state
- *
- * @param      S     blake2b_struct instance
- */
-void
-blake2b_init(blake2b_state* S, size_t outlen)
-{
-  size_t i;
-
-  memset(S, 0, sizeof(blake2b_state));
-  for (i = 0; i < 8; ++i)
-    S->h[i] = blake2b_IV[i];
-  S->h[0] ^= 0x01010000 ^ outlen;
-  S->t[0] = 0;
-  S->t[1] = 0;
-  S->outlen = outlen;
-  for (i = 0; i < BLAKE2B_BLOCKBYTES; i++)
-    S->buf[i] = 0;
-}
-
-/**
  * @brief  The Mix function is called by the Compress function, and mixes two
  *         8-byte words from the message into the hash state
  *
@@ -97,6 +76,48 @@ F(blake2b_state* S, uint8_t block[BLAKE2B_BLOCKBYTES])
 }
 
 /**
+ * @brief      Initializes blake2b state
+ *
+ * @param      S       blake2b_state instance passed by reference
+ * @param[in]  outlen  The hash output length
+ *
+ * @return     sanity value
+ */
+int
+blake2b_init(blake2b_state* S, size_t outlen, const void* key, size_t keylen)
+{
+  blake2b_param P[1];
+  P->digest_length = (uint8_t)outlen;
+  P->key_length = 0;
+  P->fanout = 1;
+  P->depth = 1;
+  store32(&P->leaf_length, 0);
+  store64(&P->node_offset, 0);
+  P->node_depth = 0;
+  P->inner_length = 0;
+  memset(P->reserved, 0, sizeof(P->reserved));
+  memset(P->salt, 0, sizeof(P->salt));
+  memset(P->personal, 0, sizeof(P->personal));
+
+  const uint8_t* p = (const uint8_t*)(P);
+  size_t i;
+  memset(S, 0, sizeof(blake2b_state));
+  for (i = 0; i < 8; ++i)
+    S->h[i] = blake2b_IV[i];
+  for (i = 0; i < 8; ++i)
+    S->h[i] ^= load64(p + sizeof(S->h[i]) * i);
+  S->outlen = P->digest_length;
+
+  if (keylen > 0) {
+    uint8_t block[BLAKE2B_BLOCKBYTES];
+    memset(block, 0, BLAKE2B_BLOCKBYTES);
+    memcpy(block, key, keylen);
+    blake2b_update(S, block, BLAKE2B_BLOCKBYTES);
+  }
+  return 0;
+}
+
+/**
  * @brief      Updates blake2b state
  *
  * @param      S      blake2b state instance
@@ -109,31 +130,15 @@ int
 blake2b_update(blake2b_state* S, const void* input_buffer, size_t inlen)
 {
   unsigned char* in = (unsigned char*)input_buffer;
-  if (inlen == 0)
-    return 0;
 
-  size_t left = S->buflen;
-  size_t fill = BLAKE2B_BLOCKBYTES - left;
-
-  if (inlen > fill) {
-    S->buflen = 0;
-    memcpy(S->buf + left, in, fill); /* Fill buffer */
+  while (inlen > BLAKE2B_BLOCKBYTES) {
     blake2b_increment_counter(S, BLAKE2B_BLOCKBYTES);
-    F(S, S->buf); /* Compress */
-    in += fill;
-    inlen -= fill;
-
-    while (inlen > BLAKE2B_BLOCKBYTES) {
-      blake2b_increment_counter(S, BLAKE2B_BLOCKBYTES);
-      F(S, in);
-      in += BLAKE2B_BLOCKBYTES;
-      inlen -= BLAKE2B_BLOCKBYTES;
-    }
+    F(S, in);
+    in += BLAKE2B_BLOCKBYTES;
+    inlen -= BLAKE2B_BLOCKBYTES;
   }
-
   memcpy(S->buf + S->buflen, in, inlen);
   S->buflen += inlen;
-
   return 0;
 }
 
@@ -143,72 +148,45 @@ blake2b_final(blake2b_state* S, void* out, size_t outlen)
   uint8_t buffer[BLAKE2B_OUTBYTES] = { 0 };
   size_t i;
 
-  if (out == NULL || outlen < S->outlen)
-    return -1;
-
-  if (blake2b_is_lastblock(S))
-    return -1;
-
   blake2b_increment_counter(S, S->buflen);
-  blake2b_set_lastblock(S);
-  memset(S->buf + S->buflen, 0, BLAKE2B_BLOCKBYTES - S->buflen); /* Padding */
+  // set last chunk = true
+  S->f[0] = (uint64_t)-1;
+  // padding
+  memset(S->buf + S->buflen, 0, BLAKE2B_BLOCKBYTES - S->buflen);
   F(S, S->buf);
 
-  for (i = 0; i < 8; ++i) /* Output full hash to temp buffer */
+  // Store back in little endian
+  for (i = 0; i < 8; ++i)
     store64(buffer + sizeof(S->h[i]) * i, S->h[i]);
 
+  // Copy first outlen bytes nto output buffer
   memcpy(out, buffer, S->outlen);
   return 0;
 }
 
 /**
- * @brief      The main blake2 algorithm
+ * @brief      The main blake2b function
  *
- * @param      d     Message
- * @param[in]  ll    Input bytes
- * @param[in]  kk    Key bytes
- * @param[in]  nn    Hash bytes
+ * @param      output  The hash output
+ * @param[in]  outlen  The hash length
+ * @param[in]  input   The message input
+ * @param[in]  inlen   The message length
+ * @param[in]  key     The key
+ * @param[in]  keylen  The key length
+ *
+ * @return     sanity value
  */
-void
-blake2(void* output, size_t outlen, const void* input, size_t inlen)
+int
+blake2b(void* output, size_t outlen, const void* input, size_t inlen,
+        const void* key, size_t keylen)
 {
   blake2b_state S[1];
-  blake2b_init(S, outlen);
-  blake2b_update(S, (const uint8_t*)input, inlen);
-  blake2b_final(S, output, outlen);
-  // size_t i;
-  // uint64_t h[8], buff[nn], block[16];
-  // uint64_t dd = ceil((double)kk / (double)BLAKE2B_BLOCKBYTES) +
-  //               ceil((double)ll / (double)BLAKE2B_BLOCKBYTES);
-  // uint64_t temp[dd * 2];
 
-  // memset(temp, 0, dd * 128);
-  // if (kk > 0)
-  //   temp[0] = temp[0] ^ kk;
-  // memcpy(temp + 1, d, ll);
-
-  // for (i = 0; i < 8; i++)
-  //   h[i] = blake2b_IV[i];
-
-  // h[0] = h[0] ^ 0x01010000 ^ (kk << 8) ^ nn;
-
-  // if (dd > 1)
-  //   for (i = 0; i < dd - 1; i++) {
-  //     memcpy(block, temp, BLAKE2B_BLOCKBYTES);
-  //     *temp += (BLAKE2B_BLOCKBYTES / 8);
-  //     F(h, block, (i + 1) * BLAKE2B_BLOCKBYTES, 0);
-  //   }
-  // *temp += (BLAKE2B_BLOCKBYTES / 8);
-  // memcpy(block, temp, BLAKE2B_BLOCKBYTES);
-
-  // if (kk = 0) {
-  //   F(h, block, ll, 1);
-  // } else {
-  //   F(h, block, ll + BLAKE2B_BLOCKBYTES, 1);
-  // }
-
-  // memcpy(buff, h, nn);
-  // // return buff;
-  // // Can't return array from function in C
-  // // https://stackoverflow.com/questions/11656532/returning-an-array-using-c
+  if (blake2b_init(S, outlen, key, keylen) < 0)
+    return -1;
+  if (blake2b_update(S, (const uint8_t*)input, inlen) < 0)
+    return -1;
+  if (blake2b_final(S, output, outlen) < 0)
+    return -1;
+  return 0;
 }
