@@ -57,18 +57,24 @@ typedef struct blake2b_param
 
 typedef struct blake2b_state
 {
-  uint64_t h[8];                   // Chained state
-  uint64_t t[2];                   // total number of bytes
-  uint64_t f[2];                   // last block flag
-  uint8_t buf[BLAKE2B_BLOCKBYTES]; // input buffer
-  size_t buflen;                   // size of buffer
-  size_t outlen;                   // digest size
+  uint64_t h[8];                   /* Chained state */
+  uint64_t t[2];                   /* total number of bytes */
+  uint64_t f[2];                   /* last block flag */
+  uint8_t buf[BLAKE2B_BLOCKBYTES]; /* input buffer */
+  size_t buflen;                   /* size of buffer */
+  size_t outlen;                   /* digest size */
 } blake2b_state;
 
-int blake2b_init(blake2b_state* S, size_t outlen, const void* key,
+extern uint64_t rotr64(const uint64_t w, const unsigned c);
+extern uint64_t load64(const void* src);
+extern void store64(void* dst, uint64_t w);
+extern void store32(void* dst, uint32_t w);
+extern void blake2b_increment_counter(blake2b_state* S, const uint64_t inc);
+extern int blake2b_init(blake2b_state* S, size_t outlen, const void* key,
                  size_t keylen);
-int blake2b_update(blake2b_state* S, const void* in, size_t inlen);
-int blake2b_final(blake2b_state* S, void* out, size_t outlen);
-int blake2b(void* out, size_t outlen, const void* in, size_t inlen,
+extern int blake2b_update(blake2b_state* S, const void* in, size_t inlen);
+extern int blake2b_final(blake2b_state* S, void* out, size_t outlen);
+extern int blake2b(void* out, size_t outlen, const void* in, size_t inlen,
             const void* key, size_t keylen);
-#endif
+
+#endif /* BLAKE_H */
