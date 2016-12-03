@@ -15,20 +15,20 @@
 
 #define BUF_LENGTH 256
 
-void
-print_hex(const uint8_t* s)
-{
+void print_hex(const uint8_t* hash)
+{ 
+  size_t i;
+  i = 0;
   printf("hash  :");
-  while (*s)
-    printf("%02x", *s++);
+  while (i++ < BLAKE2S_OUTBYTES)
+    printf("%02x", *hash++);
   printf("\n");
 }
 
-int
-main(int argc, char const* argv[])
+int main(int argc, char const* argv[])
 {
 
-  uint8_t buf[] = "";
+  uint8_t buf[] = "The quick brown fox jumps over the lazy dog";
   uint8_t key[] = "";
   uint8_t hash[BLAKE2S_OUTBYTES];
   size_t buflen = strlen((char *)buf);
@@ -42,7 +42,6 @@ main(int argc, char const* argv[])
   printf("input :%s\n", buf);
   printf("key   :%s\n", key);
   print_hex(hash);
-
   return 0;
 }
 

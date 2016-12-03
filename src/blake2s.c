@@ -5,9 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
-void G(uint64_t v[16], int a, int b,int c,int d, int64_t x, int64_t y) {                      
+static void G(uint32_t v[16], int a, int b,int c,int d, int64_t x, int64_t y) {                      
  
-  do {                                    
     v[a] = v[a] + v[b] + x;
     v[d] = rotr32(v[d] ^ v[a] , 16);
     v[c] = v[c] + v[d];
@@ -17,14 +16,13 @@ void G(uint64_t v[16], int a, int b,int c,int d, int64_t x, int64_t y) {
     v[d] = rotr32(v[d] ^ v[a] , 8);
     v[c] = v[c] + v[d];
     v[b] = rotr32(v[b] ^ v[c] , 7);         
-  } while(0);
 
 }
 
 static void F(blake2s_state* S, uint8_t block[BLAKE2S_BLOCKBYTES])
 {
   size_t i, j;
-  uint64_t v[16], s[16], m[16];
+  uint32_t v[16], s[16], m[16];
 
   for( i = 0; i < 16; ++i ) {
     m[i] = load32( block + i * sizeof( m[i] ) );
@@ -42,7 +40,7 @@ static void F(blake2s_state* S, uint8_t block[BLAKE2S_BLOCKBYTES])
 
   for (i = 0; i < 12; i++) {
     for (j = 0; j < 16; j++) {
-      s[j] = blake2s_sigma[i % 10][j];
+      s[j] = blake2s_sigma[i][j];
     }
     G(v, 0, 4, 8,  12, m[s[0]],  m[s[1]]);
     G(v, 1, 5, 9,  13, m[s[2]],  m[s[3]]);

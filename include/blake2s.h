@@ -65,8 +65,6 @@
   int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen);
   int blake2s_update( blake2s_state *S, const void *in, size_t inlen );
   int blake2s_final( blake2s_state *S, void *out, size_t outlen );
-
-  /* This is simply an alias for blake2s */
-  int blake2s( void *out, size_t outlen, const void *key, size_t keylen, const void *in, size_t inlen );
+  int blake2s(void* output, size_t outlen, const void* input, size_t inlen, const void* key, size_t keylen);
 
 #endif
