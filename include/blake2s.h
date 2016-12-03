@@ -6,7 +6,7 @@
 
   // BLAKE2s Initialization Vector.
 
-  static const uint32_t blake2s_iv[8] =
+  static const uint32_t blake2s_IV[8] =
   {
     0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
     0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
@@ -14,7 +14,7 @@
 
   // Table of permutations
 
-  const uint8_t blake2s_sigma[10][16] = {
+ static const uint8_t blake2s_sigma[10][16] = {
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
     { 14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3 },
     { 11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4 },
@@ -46,10 +46,23 @@
     size_t   outlen; // digest (output) size
   } blake2s_state;
 
+  typedef struct blake2s_param
+{
+  uint8_t digest_length;                   /* 1 */
+  uint8_t key_length;                      /* 2 */
+  uint8_t fanout;                          /* 3 */
+  uint8_t depth;                           /* 4 */
+  uint32_t leaf_length;                    /* 8 */
+  uint64_t node_offset;                    /* 16 */
+  uint8_t node_depth;                      /* 17 */
+  uint8_t inner_length;                    /* 18 */
+  uint8_t reserved[14];                    /* 32 */
+  uint8_t salt[BLAKE2S_SALTBYTES];         /* 48 */
+  uint8_t personal[BLAKE2S_PERSONALBYTES]; /* 64 */
+} blake2s_param;
+
   /* Streaming API */
-  int blake2s_init( blake2s_state *S, size_t outlen );
-  int blake2s_init_key( blake2s_state *S, size_t outlen, const void *key, size_t keylen );
-  int blake2s_init_param( blake2s_state *S, const blake2s_param *P );
+  int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen);
   int blake2s_update( blake2s_state *S, const void *in, size_t inlen );
   int blake2s_final( blake2s_state *S, void *out, size_t outlen );
 
