@@ -1,6 +1,6 @@
 IDIR = include
 ODIR = build
-CFLAGS = -I $(IDIR) -Wall -lm -g
+CFLAGS = -I $(IDIR) -Wall -lm -g -pedantic
 CC = gcc
 
 src = $(wildcard src/*.c)

@@ -65,8 +65,6 @@ typedef struct blake2b_state
   size_t outlen;                   /* digest size */
 } blake2b_state;
 
-extern uint64_t rotr64(const uint64_t w, const unsigned c);
-extern uint64_t load64(const void* src);
 extern void store64(void* dst, uint64_t w);
 extern void store32(void* dst, uint32_t w);
 extern void blake2b_increment_counter(blake2b_state* S, const uint64_t inc);
