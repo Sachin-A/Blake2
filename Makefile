@@ -1,6 +1,6 @@
 IDIR = include
 ODIR = build
-CFLAGS = -I $(IDIR) -Wall -lm -g -pedantic
+CFLAGS = -I $(IDIR) -Wall -lm -g -std=c89 -Wc90-c99-compat -Wc99-c11-compat
 CC = gcc
 
 src = $(wildcard src/*.c)
@@ -14,4 +14,4 @@ $(ODIR)/%.o: src/%.c
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	rm -f $(ODIR)/*.o *~ core  $(out)
+	rm -f $(wildcard $(ODIR)/*.o) $(wildcard *~) core  $(out).exe

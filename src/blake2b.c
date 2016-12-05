@@ -15,8 +15,8 @@
 /**
  * Helper macro to load into src 64 bytes at a time
  *
- * @param[in]  dest  The destination
- * @param[in]  src   The source
+ * @param[in]  dest  the destination
+ * @param[in]  src   the source
  */
 #if defined(NATIVE_LITTLE_ENDIAN)
   #define LOAD64(dest, src) memcpy(&(dest), (src), sizeof (dest))
@@ -34,7 +34,7 @@
 /**
  * Stores w into dst
  *
- * @param      dst   The destination
+ * @param      dst   the destination
  * @param[in]  w     word to be stored
  */
 void
@@ -73,7 +73,7 @@ store32(void* dst, uint32_t w)
  * Increments the blake2b state counter
  *
  * @param      S     blake2b_state instance
- * @param[in]  inc   The increment
+ * @param[in]  inc   the increment value
  */
 void
 blake2b_increment_counter(blake2b_state* S, const uint64_t inc)
@@ -83,7 +83,8 @@ blake2b_increment_counter(blake2b_state* S, const uint64_t inc)
 }
 
 /**
- * The Mix macro mixes two 8-byte words from the message into the hash state
+ * The blake2b mixing function like macro mixes two 8-byte words from the message 
+ * into the hash state
  *
  * @params  a, b, c, d  indices to 8-byte word entries from the work vector V
  * @params  x, y        two 8-byte word entries from padded message v
@@ -104,11 +105,11 @@ blake2b_increment_counter(blake2b_state* S, const uint64_t inc)
  * The blake2b compress function which takes a full 128-byte chunk of the 
  * input message and mixes it into the ongoing state array
  *
- * @param      state      blake2b_state instance
- * @param      block  The input block
+ * @param      state  blake2b_state instance
+ * @param      block  the input block
  */
 static void
-F(blake2b_state* state, uint8_t block[BLAKE2B_BLOCKBYTES])
+F(blake2b_state* state, const uint8_t block[BLAKE2B_BLOCKBYTES])
 {
   size_t i, j;
   uint64_t v[16], m[16], s[16];
@@ -149,8 +150,8 @@ F(blake2b_state* state, uint8_t block[BLAKE2B_BLOCKBYTES])
 /**
  * Initializes blake2b state
  *
- * @param      state       blake2b_state instance passed by reference
- * @param[in]  outlen  The hash output length
+ * @param      state   blake2b_state instance passed by reference
+ * @param[in]  outlen  the hash output length
  *
  * @return     sanity value
  */
@@ -199,18 +200,18 @@ blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen
 /**
  * Updates blake2b state
  *
- * @param      state      blake2b state instance
- * @param[in]  input_buffer    The input buffer
- * @param[in]  inlen  The input lenth
+ * @param      state         blake2b state instance
+ * @param[in]  input_buffer  the input buffer
+ * @param[in]  inlen         the input lenth
  *
  * @return     error code
  */
 int
 blake2b_update(blake2b_state* state, const void* input_buffer, size_t inlen)
 {
-  unsigned char* in;
+  const unsigned char* in;
 
-  in = (unsigned char*)input_buffer;
+  in = (const unsigned char*)input_buffer;
 
   while (inlen > BLAKE2B_BLOCKBYTES) {
     blake2b_increment_counter(state, BLAKE2B_BLOCKBYTES);
@@ -231,7 +232,7 @@ blake2b_final(blake2b_state* state, void* out, size_t outlen)
   blake2b_increment_counter(state, state->buflen);
 
   /* set last chunk = true */
-  state->f[0] = (uint64_t)-1;
+  state->f[0] = UINT64_MAX;
   
   /* padding */
   memset(state->buf + state->buflen, 0, BLAKE2B_BLOCKBYTES - state->buflen);
@@ -242,7 +243,7 @@ blake2b_final(blake2b_state* state, void* out, size_t outlen)
     store64(buffer + sizeof(state->h[i]) * i, state->h[i]);
   }
 
-  /* Copy first outlen bytes nto output buffer*/
+  /* Copy first outlen bytes into output buffer */
   memcpy(out, buffer, state->outlen);
   return 0;
 }
@@ -250,12 +251,12 @@ blake2b_final(blake2b_state* state, void* out, size_t outlen)
 /**
  * The main blake2b function
  *
- * @param      output  The hash output
- * @param[in]  outlen  The hash length
- * @param[in]  input   The message input
- * @param[in]  inlen   The message length
- * @param[in]  key     The key
- * @param[in]  keylen  The key length
+ * @param      output  the hash output
+ * @param[in]  outlen  the hash length
+ * @param[in]  input   the message input
+ * @param[in]  inlen   the message length
+ * @param[in]  key     the key
+ * @param[in]  keylen  the key length
  *
  * @return     sanity value
  */

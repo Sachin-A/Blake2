@@ -1,5 +1,4 @@
 #include "blake2b.h"
-#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
