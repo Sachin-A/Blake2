@@ -37,7 +37,7 @@ enum blake2b_constant
   BLAKE2B_OUTBYTES = 64,
   BLAKE2B_KEYBYTES = 64,
   BLAKE2B_SALTBYTES = 16,
-  BLAKE2B_PERSONALBYTES = 16,
+  BLAKE2B_PERSONALBYTES = 16
 };
 
 typedef struct blake2b_param
@@ -57,7 +57,7 @@ typedef struct blake2b_param
 
 typedef struct blake2b_state
 {
-  uint64_t h[8];                   /* Chained state */
+  uint64_t h[8];                   /* chained state */
   uint64_t t[2];                   /* total number of bytes */
   uint64_t f[2];                   /* last block flag */
   uint8_t buf[BLAKE2B_BLOCKBYTES]; /* input buffer */
