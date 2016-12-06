@@ -9,7 +9,6 @@
 
 #include "blake2s.h"
 #include "utils.h"
-#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -21,14 +20,14 @@ void print_hex(const uint8_t* hash)
   i = 0;
   printf("hash  :");
   while (i++ < BLAKE2S_OUTBYTES)
-    printf("%02x", *hash++);
+    printf("%02x ", *hash++);
   printf("\n");
 }
 
 int main(int argc, char const* argv[])
 {
 
-  uint8_t buf[] = "The quick brown fox jumps over the lazy dog";
+  uint8_t buf[] = "abc";
   uint8_t key[] = "";
   uint8_t hash[BLAKE2S_OUTBYTES];
   size_t buflen = strlen((char *)buf);
@@ -44,4 +43,3 @@ int main(int argc, char const* argv[])
   print_hex(hash);
   return 0;
 }
-

@@ -29,6 +29,21 @@ uint32_t load32( const void *src )
 }
 
 /**
+ * Stores 16 bit w into a dst
+ */
+
+void store16( void *dst, uint16_t w )
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+  memcpy(dst, &w, sizeof w);
+#else
+  uint8_t *p = ( uint8_t * )dst;
+  *p++ = ( uint8_t )w; w >>= 8;
+  *p++ = ( uint8_t )w;
+#endif
+}
+
+/**
  * Stores w into a dst
  */
 void store32(void* dst, uint32_t w)

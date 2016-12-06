@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static void G(uint32_t v[16], int a, int b,int c,int d, int64_t x, int64_t y) {                      
+static void G(uint32_t v[16], int a, int b,int c,int d, int32_t x, int32_t y) {                      
  
     v[a] = v[a] + v[b] + x;
     v[d] = rotr32(v[d] ^ v[a] , 16);
@@ -38,7 +38,7 @@ static void F(blake2s_state* S, uint8_t block[BLAKE2S_BLOCKBYTES])
   v[14] ^= S->f[0];
   v[15] ^= S->f[1];
 
-  for (i = 0; i < 12; i++) {
+  for (i = 0; i < 10; i++) {
     for (j = 0; j < 16; j++) {
       s[j] = blake2s_sigma[i][j];
     }
@@ -67,9 +67,9 @@ int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen
   P->depth = 1;
   store32(&P->leaf_length, 0);
   store32(&P->node_offset, 0);
+  store16(&P->xof_length, 0);
   P->node_depth = 0;
   P->inner_length = 0;
-  memset(P->reserved, 0, sizeof(P->reserved));
   memset(P->salt, 0, sizeof(P->salt));
   memset(P->personal, 0, sizeof(P->personal));
 
@@ -114,7 +114,7 @@ int blake2s_final(blake2s_state* S, void* out, size_t outlen)
   uint8_t buffer[BLAKE2S_OUTBYTES] = { 0 };
   size_t i;
   blake2s_increment_counter(S, S->buflen);
-  S->f[0] = (uint32_t)-1;
+  S->f[0] = UINT32_MAX;
   memset(S->buf + S->buflen, 0, BLAKE2S_BLOCKBYTES - S->buflen);
   F(S, S->buf);
   for (i = 0; i < 8; ++i)
