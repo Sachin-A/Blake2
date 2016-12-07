@@ -65,14 +65,11 @@ typedef struct blake2b_state
   size_t outlen;                   /* digest size */
 } blake2b_state;
 
-extern void store64(void* dst, uint64_t w);
-extern void store32(void* dst, uint32_t w);
-extern void blake2b_increment_counter(blake2b_state* S, const uint64_t inc);
-extern int blake2b_init(blake2b_state* S, size_t outlen, const void* key,
+extern void blake2b_init(blake2b_state* state, size_t outlen, const void* key,
                  size_t keylen);
-extern int blake2b_update(blake2b_state* S, const void* in, size_t inlen);
-extern int blake2b_final(blake2b_state* S, void* out, size_t outlen);
-extern int blake2b(void* out, size_t outlen, const void* in, size_t inlen,
+extern void blake2b_update(blake2b_state* state, const void* in, size_t inlen);
+extern void blake2b_final(blake2b_state* state, void* out, size_t outlen);
+extern void blake2b(void* out, size_t outlen, const void* in, size_t inlen,
             const void* key, size_t keylen);
 
 #endif /* BLAKE_H */
