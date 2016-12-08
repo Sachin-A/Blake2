@@ -23,8 +23,7 @@
 #else
   #define LOAD64(dest, src)                                          \
     do {                                                             \
-    const uint8_t* load;                                             \
-    load = (const uint8_t*)(src);                                    \
+    const uint8_t* load = (const uint8_t*)(src);                     \
     dest = ((uint64_t)(load[0]) << 0) | ((uint64_t)(load[1]) << 8) | \
     ((uint64_t)(load[2]) << 16) | ((uint64_t)(load[3]) << 24) |      \
     ((uint64_t)(load[4]) << 32) | ((uint64_t)(load[5]) << 40) |      \
@@ -39,14 +38,13 @@
  * @param[in]  w     word to be stored
  */
 void
-store64(void* dst, uint64_t w)
+store64(uint8_t* dst, uint64_t w)
 {
 #if defined(NATIVE_LITTLE_ENDIAN)
   memcpy(dst, &w, sizeof w);
 #else
-  uint8_t* p;
+  uint8_t* p = dst;
 
-  p = (uint8_t*)dst;
   p[0] = (uint8_t)(w >> 0);
   p[1] = (uint8_t)(w >> 8);
   p[2] = (uint8_t)(w >> 16);
@@ -59,14 +57,13 @@ store64(void* dst, uint64_t w)
 }
 
 void
-store32(void* dst, uint32_t w)
+store32(uint8_t* dst, uint32_t w)
 {
 #if defined(NATIVE_LITTLE_ENDIAN)
   memcpy(dst, &w, sizeof w);
 #else
-  uint8_t* p;
+  uint8_t* p = dst;
 
-  p = (uint8_t*)dst;
   p[0] = (uint8_t)(w >> 0);
   p[1] = (uint8_t)(w >> 8);
   p[2] = (uint8_t)(w >> 16);
@@ -157,33 +154,29 @@ F(blake2b_state* state, const uint8_t block[BLAKE2B_BLOCKBYTES])
  *
  * @param      state   blake2b_state instance passed by reference
  * @param[in]  outlen  the hash output length
- *
- * @return     sanity value
  */
 void
 blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen)
 {
-  blake2b_param P;
+  blake2b_param P = {0};
   const uint8_t* p;
   size_t i;
   uint64_t dest;
 
   P.digest_length = (uint8_t)outlen;
-  P.key_length = 0;
+  /*P.key_length = 0;*/
   P.fanout = 1;
   P.depth = 1;
-  store32(&P.leaf_length, 0);
+  /*store32(&P.leaf_length, 0);
   store64(&P.node_offset, 0);
   P.node_depth = 0;
   P.inner_length = 0;
   memset(P.reserved, 0, sizeof(P.reserved));
   memset(P.salt, 0, sizeof(P.salt));
-  memset(P.personal, 0, sizeof(P.personal));
+  memset(P.personal, 0, sizeof(P.personal));*/
 
   dest = 0;
-
   p = (const uint8_t*)(&P);
-  memset(state, 0, sizeof(blake2b_state));
   for (i = 0; i < 8; ++i) {
     state->h[i] = blake2b_IV[i];
   }
@@ -194,8 +187,7 @@ blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen
   state->outlen = P.digest_length;
 
   if (keylen > 0) {
-    uint8_t block[BLAKE2B_BLOCKBYTES];
-    memset(block, 0, BLAKE2B_BLOCKBYTES);
+    uint8_t block[BLAKE2B_BLOCKBYTES] = {0};
     memcpy(block, key, keylen);
     blake2b_update(state, block, BLAKE2B_BLOCKBYTES);
   }
@@ -206,16 +198,14 @@ blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen
  *
  * @param      state         blake2b state instance
  * @param[in]  input_buffer  the input buffer
- * @param[in]  inlen         the input lenth
- *
- * @return     error code
+ * @param[in]  inlen         the input length
  */
 void
-blake2b_update(blake2b_state* state, const void* input_buffer, size_t inlen)
+blake2b_update(blake2b_state* state, const unsigned char* input_buffer, size_t inlen)
 {
   const unsigned char* in;
 
-  in = (const unsigned char*)input_buffer;
+  in = input_buffer;
 
   while (inlen > BLAKE2B_BLOCKBYTES) {
     blake2b_increment_counter(state, BLAKE2B_BLOCKBYTES);
@@ -223,9 +213,19 @@ blake2b_update(blake2b_state* state, const void* input_buffer, size_t inlen)
     in += BLAKE2B_BLOCKBYTES;
     inlen -= BLAKE2B_BLOCKBYTES;
   }
-  memcpy(state->buf + state->buflen, in, inlen);
-  state->buflen += inlen;
+  if(inlen < (BLAKE2B_BLOCKBYTES-state->buflen)) {
+      memcpy(state->buf + state->buflen, in, inlen);
+      state->buflen += inlen;
+  }
 }
+
+/**
+ * Finalizes state, pads final block and stores hash
+ *
+ * @param      state  blake2b state instance
+ * @param[in]  out    the output buffer
+ * @param[in]  inlen  the digest size
+ */
 
 void
 blake2b_final(blake2b_state* state, void* out, size_t outlen)
@@ -265,7 +265,7 @@ void
 blake2b(void* output, size_t outlen, const void* input, size_t inlen,
         const void* key, size_t keylen)
 {
-  blake2b_state state;
+  blake2b_state state = {0};
 
   blake2b_init(&state, outlen, key, keylen);
   blake2b_update(&state, (const uint8_t*)input, inlen);

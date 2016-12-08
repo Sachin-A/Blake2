@@ -67,7 +67,7 @@ typedef struct blake2b_state
 
 extern void blake2b_init(blake2b_state* state, size_t outlen, const void* key,
                  size_t keylen);
-extern void blake2b_update(blake2b_state* state, const void* in, size_t inlen);
+extern void blake2b_update(blake2b_state* state, const unsigned char* in, size_t inlen);
 extern void blake2b_final(blake2b_state* state, void* out, size_t outlen);
 extern void blake2b(void* out, size_t outlen, const void* in, size_t inlen,
             const void* key, size_t keylen);
