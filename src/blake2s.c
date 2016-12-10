@@ -114,7 +114,7 @@ int blake2s_final(blake2s_state* S, void* out, size_t outlen)
   uint8_t buffer[BLAKE2S_OUTBYTES] = { 0 };
   size_t i;
   blake2s_increment_counter(S, S->buflen);
-  S->f[0] = UINT32_MAX-1;
+  S->f[0] = UINT32_MAX;
   memset(S->buf + S->buflen, 0, BLAKE2S_BLOCKBYTES - S->buflen);
   F(S, S->buf);
   for (i = 0; i < 8; ++i)
