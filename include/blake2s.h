@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-  // BLAKE2s Initialization Vector.
+  /* BLAKE2s Initialization Vector. */
 
   static const uint32_t blake2s_IV[8] =
   {
@@ -12,7 +12,7 @@
     0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
   };
 
-  // Table of permutations
+  /* Table of permutations */
 
  static const uint8_t blake2s_sigma[10][16] = {
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
@@ -38,33 +38,40 @@
 
   typedef struct blake2s_state
   {
-    uint32_t h[8];            // Chained state
-    uint32_t t[2];            // Total number of bytes
-    uint32_t f[2];            
-    uint8_t  buf[BLAKE2S_BLOCKBYTES]; // Input buffer
-    size_t   buflen; // size of buffer
-    size_t   outlen; // digest (output) size
+    uint32_t h[8];            /* Chained state */
+    uint32_t t[2];            /* Total number of bytes */
+    uint32_t f[2];            /* Last block flag */
+    uint8_t  buf[BLAKE2S_BLOCKBYTES]; /* Input buffer */
+    size_t   buflen; /* size of buffer */
+    size_t   outlen; /* digest (output) size */
   } blake2s_state;
 
   typedef struct blake2s_param
-{
-  uint8_t digest_length;                   /* 1 */
-  uint8_t key_length;                      /* 2 */
-  uint8_t fanout;                          /* 3 */
-  uint8_t depth;                           /* 4 */
-  uint32_t leaf_length;                    /* 8 */
-  uint32_t node_offset;                    /* 12 */
-  uint16_t xof_length;                     /* 14 */
-  uint8_t node_depth;                      /* 15 */
-  uint8_t inner_length;                    /* 16 */
-  uint8_t salt[BLAKE2S_SALTBYTES];         /* 24 */
-  uint8_t personal[BLAKE2S_PERSONALBYTES]; /* 32 */
-} blake2s_param;
+  {
+    uint8_t digest_length;                   /* 1 */
+    uint8_t key_length;                      /* 2 */
+    uint8_t fanout;                          /* 3 */
+    uint8_t depth;                           /* 4 */
+    uint32_t leaf_length;                    /* 8 */
+    uint32_t node_offset;                    /* 12 */
+    uint16_t xof_length;                     /* 14 */
+    uint8_t node_depth;                      /* 15 */
+    uint8_t inner_length;                    /* 16 */
+    uint8_t salt[BLAKE2S_SALTBYTES];         /* 24 */
+    uint8_t personal[BLAKE2S_PERSONALBYTES]; /* 32 */
+  } blake2s_param;
+  
+  /* Utility API */
+  extern uint32_t rotr32(const uint32_t w, const unsigned c);
+  extern uint32_t load32(const void* src);
+  extern void store16(void* dst, uint16_t w);
+  extern void store32(void* dst, uint32_t w);
+  extern void blake2s_increment_counter(blake2s_state* S, const uint32_t inc);
 
   /* Streaming API */
-  int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen);
-  int blake2s_update( blake2s_state *S, const void *in, size_t inlen );
-  int blake2s_final( blake2s_state *S, void *out, size_t outlen );
-  int blake2s(void* output, size_t outlen, const void* input, size_t inlen, const void* key, size_t keylen);
+  extern int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen);
+  extern int blake2s_update( blake2s_state *S, const void *in, size_t inlen );
+  extern int blake2s_final( blake2s_state *S, void *out, size_t outlen );
+  extern int blake2s(void* output, size_t outlen, const void* input, size_t inlen, const void* key, size_t keylen);
 
-#endif
+#endif /* BLAKE_H */
