@@ -51,3 +51,12 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Folders
+build*
+bin*
+
+# Plotting related
+src/benchmark/blake2b*
+src/benchmark/md5*
+src/benchmark/benchmark.pdf
