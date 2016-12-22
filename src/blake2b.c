@@ -85,7 +85,7 @@ blake2b_increment_counter(blake2b_state* state, const uint64_t inc)
 }
 
 /**
- * The blake2b mixing function like macro mixes two 8-byte words from the message 
+ * The blake2b mixing function like macro mixes two 8-byte words from the message
  * into the hash state
  *
  * @params  a, b, c, d  indices to 8-byte word entries from the work vector V
@@ -104,7 +104,7 @@ blake2b_increment_counter(blake2b_state* state, const uint64_t inc)
   }while(0)
 
 /**
- * The blake2b compress function which takes a full 128-byte chunk of the 
+ * The blake2b compress function which takes a full 128-byte chunk of the
  * input message and mixes it into the ongoing state array
  *
  * @param      state  blake2b_state instance
@@ -232,7 +232,7 @@ blake2b_final(blake2b_state* state, void* out, size_t outlen)
 {
   uint8_t buffer[BLAKE2B_OUTBYTES] = { 0 };
   size_t i;
-  
+
   blake2b_increment_counter(state, state->buflen);
 
   /* set last chunk = true */
@@ -271,3 +271,12 @@ blake2b(void* output, size_t outlen, const void* input, size_t inlen,
   blake2b_update(&state, (const uint8_t*)input, inlen);
   blake2b_final(&state, output, outlen);
 }
+
+#if defined(BENCHMARK)
+int
+crypto_hash(unsigned char* out, unsigned char* in, unsigned long inlen)
+{
+  blake2b(out, BLAKE2B_OUTBYTES, in, inlen, NULL, 0);
+  return 0;
+}
+#endif

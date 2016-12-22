@@ -1,0 +1,19 @@
+#maxx can hold values [0,4096]
+maxx = 320
+set xrange [1:maxx]
+set xlabel "bytes"
+set ylabel "cycles"
+#intervals to be marked in graph
+set xtics 0,32,maxx
+set grid
+set key left
+
+set terminal pdfcairo
+set output "benchmark.pdf"
+#1 -> x-axis: bytes
+#2 -> y-axis: median cycles
+plot    "blake2b.data" using 1:2 with lines title "BLAKE2b"
+replot  "md5.data" using 1:2 with lines title "MD5"
+
+set output "benchmark.pdf"
+replot
