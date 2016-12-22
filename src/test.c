@@ -26,11 +26,19 @@ void print_hex(const uint8_t* hash)
 int main(int argc, char const* argv[])
 {
 
-  uint8_t buf[] = "abc";
-  uint8_t key[] = "";
+  uint8_t buf[] = {};
+  uint8_t key[] = {0x00, 0x01, 0x02, 0x03, 
+                  0x04, 0x05, 0x06, 0x07, 
+                  0x08, 0x09, 0x0a, 0x0b, 
+                  0x0c, 0x0d, 0x0e, 0x0f, 
+                  0x10, 0x11, 0x12, 0x13, 
+                  0x14, 0x15, 0x16, 0x17, 
+                  0x18, 0x19, 0x1a, 0x1b, 
+                  0x1c, 0x1d, 0x1e, 0x1f};
+
   uint8_t hash[BLAKE2S_OUTBYTES];
-  size_t buflen = strlen((char *)buf);
-  size_t keylen = strlen((char *)key);
+  size_t buflen = sizeof(buf); 
+  size_t keylen = sizeof(key); 
   size_t i;
 
   for (i = 0; i <= buflen; ++i) {

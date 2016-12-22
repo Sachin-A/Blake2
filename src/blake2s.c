@@ -138,7 +138,7 @@ int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen
   /*initialize key*/
   blake2s_param P[1];
   P->digest_length = (uint8_t)outlen;
-  P->key_length = 0;
+  P->key_length = (uint8_t)keylen;
   P->fanout = 1;
   P->depth = 1;
   store32(&P->leaf_length, 0);
@@ -176,14 +176,29 @@ int blake2s_update(blake2s_state* S, const void* input_buffer, size_t inlen)
 {
   unsigned char* in = (unsigned char*)input_buffer;
 
-  while (inlen > BLAKE2S_BLOCKBYTES) {
-    blake2s_increment_counter(S, BLAKE2S_BLOCKBYTES);
-    F(S, in);
-    in += BLAKE2S_BLOCKBYTES;
-    inlen -= BLAKE2S_BLOCKBYTES;
+  if( inlen > 0 )
+  {
+    size_t left = S->buflen;
+    size_t fill = BLAKE2S_BLOCKBYTES - left;
+    if( inlen > fill )
+    {
+      S->buflen = 0;
+      memcpy( S->buf + left, in, fill ); /* Fill buffer */
+      blake2s_increment_counter( S, BLAKE2S_BLOCKBYTES );
+      F( S, S->buf ); /* Compress */
+      in += fill; 
+      inlen -= fill;
+
+      while (inlen > BLAKE2S_BLOCKBYTES) {
+        blake2s_increment_counter(S, BLAKE2S_BLOCKBYTES);
+        F(S, in);
+        in += BLAKE2S_BLOCKBYTES;
+        inlen -= BLAKE2S_BLOCKBYTES;
+    }
   }
   memcpy(S->buf + S->buflen, in, inlen);
   S->buflen += inlen;
+  }
   return 0;
 }
 
