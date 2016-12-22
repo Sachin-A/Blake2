@@ -4,7 +4,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-  /* BLAKE2s Initialization Vector. */
+  /** 
+   * BLAKE2s Initialization Vector. 
+   */
 
   static const uint32_t blake2s_IV[8] =
   {
@@ -12,7 +14,9 @@
     0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
   };
 
-  /* Table of permutations */
+  /**
+   * Table of permutations 
+   */
 
  static const uint8_t blake2s_sigma[10][16] = {
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
@@ -61,12 +65,6 @@
     uint8_t personal[BLAKE2S_PERSONALBYTES]; /* 32 */
   } blake2s_param;
   
-  /* Utility API */
-  extern uint32_t rotr32(const uint32_t w, const unsigned c);
-  extern uint32_t load32(const void* src);
-  extern void store16(void* dst, uint16_t w);
-  extern void store32(void* dst, uint32_t w);
-  extern void blake2s_increment_counter(blake2s_state* S, const uint32_t inc);
 
   /* Streaming API */
   extern int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen);

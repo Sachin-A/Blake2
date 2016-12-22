@@ -1,3 +1,4 @@
 build/
 blake2s
 *.exe
+bin/
