@@ -85,7 +85,7 @@ blake2b_increment_counter(blake2b_state* state, const uint64_t inc)
 }
 
 /**
- * The blake2b mixing function like macro mixes two 8-byte words from the message 
+ * The blake2b mixing function like macro mixes two 8-byte words from the message
  * into the hash state
  *
  * @params  a, b, c, d  indices to 8-byte word entries from the work vector V
@@ -104,7 +104,7 @@ blake2b_increment_counter(blake2b_state* state, const uint64_t inc)
   }while(0)
 
 /**
- * The blake2b compress function which takes a full 128-byte chunk of the 
+ * The blake2b compress function which takes a full 128-byte chunk of the
  * input message and mixes it into the ongoing state array
  *
  * @param      state  blake2b_state instance
@@ -201,10 +201,10 @@ blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen
  * @param[in]  inlen         the input length
  */
 void
-blake2b_update(blake2b_state* state, const unsigned char* input_buffer, size_t inlen)
+blake2b_update(blake2b_state* state, const unsigned char* input_buffer,
+               size_t inlen)
 {
   const unsigned char* in;
-
   in = input_buffer;
 
   while (inlen > BLAKE2B_BLOCKBYTES) {
@@ -213,10 +213,9 @@ blake2b_update(blake2b_state* state, const unsigned char* input_buffer, size_t i
     in += BLAKE2B_BLOCKBYTES;
     inlen -= BLAKE2B_BLOCKBYTES;
   }
-  if(inlen < (BLAKE2B_BLOCKBYTES-state->buflen)) {
-      memcpy(state->buf + state->buflen, in, inlen);
-      state->buflen += inlen;
-  }
+
+  memcpy(state->buf + state->buflen, in, inlen);
+  state->buflen += inlen;
 }
 
 /**
@@ -232,7 +231,7 @@ blake2b_final(blake2b_state* state, void* out, size_t outlen)
 {
   uint8_t buffer[BLAKE2B_OUTBYTES] = { 0 };
   size_t i;
-  
+
   blake2b_increment_counter(state, state->buflen);
 
   /* set last chunk = true */
