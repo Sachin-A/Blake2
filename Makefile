@@ -15,4 +15,4 @@ $(ODIR)/%.o: src/%.c
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	rm -f $(wildcard $(ODIR)/*.o)  $(wildcard *~) core  $(BIN)/$(out)*
+	rm -f $(wildcard $(ODIR)/*.o) $(wildcard *~) core  $(BIN)/$(out)*

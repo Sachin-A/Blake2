@@ -135,6 +135,8 @@ static void F(blake2s_state* S, uint8_t block[BLAKE2S_BLOCKBYTES])
  */
 int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen)
 {
+  const uint8_t* p;
+  size_t i;
   /*initialize key*/
   blake2s_param P[1];
   P->digest_length = (uint8_t)outlen;
@@ -150,10 +152,9 @@ int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen
   memset(P->personal, 0, sizeof(P->personal));
 
   /*initialize param*/
-
-  const uint8_t* p = (const uint8_t*)(P);
-  size_t i;
+  p = (const uint8_t*)(P); 
   memset(S, 0, sizeof(blake2s_state));
+
   for (i = 0; i < 8; ++i)
     S->h[i] = blake2s_IV[i];
   for (i = 0; i < 8; ++i)
