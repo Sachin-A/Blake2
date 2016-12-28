@@ -164,7 +164,9 @@ blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen
   uint64_t dest;
 
   P.digest_length = (uint8_t)outlen;
-  /*P.key_length = 0;*/
+  if(keylen > 0) {
+    P.key_length = (uint8_t)keylen;
+  }
   P.fanout = 1;
   P.depth = 1;
   /*store32(&P.leaf_length, 0);
@@ -190,6 +192,7 @@ blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen
     uint8_t block[BLAKE2B_BLOCKBYTES] = {0};
     memcpy(block, key, keylen);
     blake2b_update(&state, block, BLAKE2B_BLOCKBYTES);
+    memset(block, 0, BLAKE2B_BLOCKBYTES);
   }
 }
 
@@ -205,7 +208,6 @@ blake2b_update(blake2b_state* state, const unsigned char* input_buffer,
                size_t inlen)
 {
   unsigned char* in = input_buffer;
-  blake2b_state* state
   size_t left = state->buflen;
   size_t fill = BLAKE2B_BLOCKBYTES - left;
   if (inlen > fill) {
