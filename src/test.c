@@ -12,8 +12,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BUF_LENGTH 256
-
 void print_hex(const uint8_t* hash, char* string, int len)
 { 
   size_t i;
@@ -31,17 +29,18 @@ int main(int argc, char const* argv[])
   uint8_t hash[BLAKE2S_OUTBYTES];
   size_t i;
   
+  /* Works only for unkeyed hash */
   for (i = 0; i < BLAKE2S_KEYBYTES; ++i)
     key[i] = (uint8_t)i;
 
   for (i = 0; i < BLAKE2_KAT_LENGTH; ++i)
-    buf[i] = (uint8_t)0;
-
-  for (i = 0; i < BLAKE2_KAT_LENGTH; ++i)
     buf[i] = (uint8_t)i;
 
+  size_t buflen = sizeof(buf);
+  size_t keylen = sizeof(key);
+
   for (i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
-    blake2s(hash, BLAKE2S_OUTBYTES, buf, i, key, BLAKE2S_KEYBYTES);
+    blake2s(hash, BLAKE2S_OUTBYTES, buf, i, key, 0);
 
     if (memcmp(hash, blake2s_kat[i], BLAKE2S_OUTBYTES)) {
       printf("Part %d\n", (int)i);
@@ -56,7 +55,6 @@ int main(int argc, char const* argv[])
   }
 
   printf("SUCCESS\n");
-  print_hex(blake2s_kat[i], "expected", BLAKE2S_OUTBYTES);
 
   return 0;
 }
