@@ -25,16 +25,20 @@ main(int argc, char const* argv[])
   uint8_t hash[BLAKE2B_OUTBYTES];
   size_t i;
 
-  /* keyed hashing not implemented yet */
-  for (i = 0; i < BLAKE2B_KEYBYTES; ++i)
+  /* Key of the form (i, i+1 ... i+63 where i=0) */
+  for (i = 0; i < BLAKE2B_KEYBYTES; ++i) {
     key[i] = (uint8_t)i;
+  }
 
-  for (i = 0; i < BLAKE2_KAT_LENGTH; ++i)
+  for (i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
     buf[i] = (uint8_t)0;
-
-  for (i = 0; i < BLAKE2_KAT_LENGTH; ++i)
+  }
+  /* Buffer of the form (i, i+1 ... i+255 where i=0) */
+  for (i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
     buf[i] = (uint8_t)i;
+  }
 
+  /* Testing for unkeyed hashes against the test vectors */
   for (i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
     blake2b(hash, BLAKE2B_OUTBYTES, buf, i, key, 0);
     if (memcmp(hash, blake2b_kat[i], BLAKE2B_OUTBYTES)) {
@@ -47,6 +51,7 @@ main(int argc, char const* argv[])
       return -1;
     }
   }
+  /* Testing for keyed hashes against the test vectors */
   for (i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
     blake2b(hash, BLAKE2B_OUTBYTES, buf, i, key, BLAKE2B_KEYBYTES);
     if (memcmp(hash, blake2b_keyed_kat[i], BLAKE2B_OUTBYTES)) {
@@ -59,6 +64,7 @@ main(int argc, char const* argv[])
       return -1;
     }
   }
+  /* All test vectors pass successfully */
   printf("Success\n");
 
   return 0;
