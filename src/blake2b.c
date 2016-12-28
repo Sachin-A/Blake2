@@ -191,7 +191,7 @@ blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen
   if (keylen > 0) {
     uint8_t block[BLAKE2B_BLOCKBYTES] = {0};
     memcpy(block, key, keylen);
-    blake2b_update(&state, block, BLAKE2B_BLOCKBYTES);
+    blake2b_update(state, block, BLAKE2B_BLOCKBYTES);
     memset(block, 0, BLAKE2B_BLOCKBYTES);
   }
 }
