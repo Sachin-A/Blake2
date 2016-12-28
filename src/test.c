@@ -28,6 +28,7 @@ int main(int argc, char const* argv[])
   uint8_t buf[BLAKE2_KAT_LENGTH];
   uint8_t hash[BLAKE2S_OUTBYTES];
   size_t i;
+  size_t keylen;
   
   /* Works only for unkeyed hash */
   for (i = 0; i < BLAKE2S_KEYBYTES; ++i)
@@ -36,8 +37,7 @@ int main(int argc, char const* argv[])
   for (i = 0; i < BLAKE2_KAT_LENGTH; ++i)
     buf[i] = (uint8_t)i;
 
-  size_t buflen = sizeof(buf);
-  size_t keylen = sizeof(key);
+  keylen = sizeof(key);
 
   for (i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
     blake2s(hash, BLAKE2S_OUTBYTES, buf, i, key, 0);
