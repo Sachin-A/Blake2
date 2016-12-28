@@ -8,11 +8,14 @@ src = $(wildcard src/*.c)
 obj = $(patsubst src/%.c, $(ODIR)/%.o, $(src))
 out = blake2s
 
+
 blake: $(obj)
+	@mkdir -p $(BIN)
 	$(CC) $(obj) -o $(BIN)/$(out) $(CFLAGS)
 
 $(ODIR)/%.o: src/%.c
+	@mkdir -p $(@D)
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	rm -f $(wildcard $(ODIR)/*.o)  $(wildcard *~) core  $(BIN)/$(out)*
+	rm -f $(wildcard $(ODIR)/*.o) $(wildcard *~) core  $(BIN)/$(out)*
