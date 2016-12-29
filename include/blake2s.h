@@ -1,5 +1,5 @@
-#ifndef BLAKE2S_H
-#define BLAKE2S_H
+#ifndef BLAKE_H
+#define BLAKE_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -8,8 +8,7 @@
    * BLAKE2s Initialization Vector. 
    */
 
-  static const uint32_t blake2s_IV[8] =
-  {
+  static const uint32_t blake2s_IV[8] = {
     0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
     0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
   };
@@ -67,9 +66,9 @@
   
 
   /* Streaming API */
-  extern int blake2s_init(blake2s_state* S, size_t outlen, const void* key, size_t keylen);
-  extern int blake2s_update( blake2s_state *S, const void *in, size_t inlen );
-  extern int blake2s_final( blake2s_state *S, void *out, size_t outlen );
-  extern int blake2s(void* output, size_t outlen, const void* input, size_t inlen, const void* key, size_t keylen);
+  extern void blake2s_init(blake2s_state* state, size_t outlen, const void* key, size_t keylen);
+  extern void blake2s_update( blake2s_state* state, const unsigned char* in, size_t inlen );
+  extern void blake2s_final( blake2s_state* state, void* out, size_t outlen );
+  extern void blake2s(void* output, size_t outlen, const void* input, size_t inlen, const void* key, size_t keylen);
 
 #endif /* BLAKE_H */

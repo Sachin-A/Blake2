@@ -1,4 +1,5 @@
 #define BLAKE2_KAT_LENGTH 256
+
 static const uint8_t blake2s_kat[BLAKE2_KAT_LENGTH][BLAKE2S_OUTBYTES] = 
 {
     {

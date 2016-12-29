@@ -1,23 +1,21 @@
-## Common settings that generally should always be used with your language specific settings
+## Common settings
 
 # Auto detect text files and perform LF normalization
 * text=auto
 
-#
 # The above will handle all files NOT found below
-#
 
 # Documents
-*.doc	 diff=astextplain
-*.DOC	 diff=astextplain
+*.doc diff=astextplain
+*.DOC diff=astextplain
 *.docx diff=astextplain
 *.DOCX diff=astextplain
-*.dot  diff=astextplain
-*.DOT  diff=astextplain
-*.pdf  diff=astextplain
-*.PDF	 diff=astextplain
-*.rtf	 diff=astextplain
-*.RTF	 diff=astextplain
+*.dot diff=astextplain
+*.DOT diff=astextplain
+*.pdf diff=astextplain
+*.PDF diff=astextplain
+*.rtf diff=astextplain
+*.RTF diff=astextplain
 *.md text
 *.adoc text
 *.textile text
@@ -40,9 +38,9 @@
 #*.svg text
 *.eps binary
 
-## Settings for C/C++ specific files
+## C/C++ specific settings
 
-# Sources
+#sources
 *.c text
 *.cc text
 *.cxx text
