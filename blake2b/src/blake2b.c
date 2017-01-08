@@ -207,7 +207,7 @@ void
 blake2b_update(blake2b_state* state, const unsigned char* input_buffer,
                size_t inlen)
 {
-  unsigned char* in = input_buffer;
+  const unsigned char* in = input_buffer;
   size_t left = state->buflen;
   size_t fill = BLAKE2B_BLOCKBYTES - left;
   if (inlen > fill) {
