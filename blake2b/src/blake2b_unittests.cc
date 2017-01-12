@@ -5,6 +5,16 @@
 #include <stdio.h>
 #include <string.h>
 
+::testing::AssertionResult CompareArray(uint8_t* hash, uint8_t* correct) {
+  for (size_t i = 0; i < BLAKE2B_OUTBYTES; ++i) {
+    if (hash[i] != correct[i]) {
+      return ::testing::AssertionFailure() << "Hash[" << i << "] (" << hash[i]
+      << ") != Correct[" << i << "] (" <<correct[i] << ")"; 
+    }
+    return ::testing::AssertionSuccess();
+  }
+}
+
 struct testvalues {
 public:
   uint8_t key[BLAKE2B_KEYBYTES];
