@@ -48,6 +48,16 @@ public:
   testvalues *values;
 };
 
+TEST_F(KnownAnswerTests, Unkeyed) {
+  for (size_t i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
+    blake2b(values->hash, BLAKE2B_OUTBYTES, values->buf, i, values->key, 0);
+    memcpy(values->correct, blake2b_kat[i], BLAKE2B_OUTBYTES);
+
+    EXPECT_TRUE(CompareArray(values->hash, values->correct));
+  }
+
+}
+
 int main(int argc, char **argv) {
 
   testing::InitGoogleTest(&argc, argv);
