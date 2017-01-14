@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef BLAKE_H
 #define BLAKE_H
 
@@ -73,3 +77,8 @@ extern void blake2b(void* out, size_t outlen, const void* in, size_t inlen,
             const void* key, size_t keylen);
 
 #endif /* BLAKE_H */
+
+#ifdef __cplusplus
+}
+#endif
+

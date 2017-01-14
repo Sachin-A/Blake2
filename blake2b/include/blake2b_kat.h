@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define BLAKE2_KAT_LENGTH 256
 
 static const uint8_t blake2b_kat[BLAKE2_KAT_LENGTH][BLAKE2B_OUTBYTES] =
@@ -5127,3 +5131,8 @@ static const uint8_t blake2b_keyed_kat[BLAKE2_KAT_LENGTH][BLAKE2B_OUTBYTES] =
     0xEE, 0x2D, 0x46, 0xD6, 0x2E, 0xF2, 0xA4, 0x61
   },
 };
+
+#ifdef __cplusplus
+}
+#endif
+
