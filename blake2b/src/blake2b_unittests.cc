@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+extern "C" void blake2b(void* out, size_t outlen, const void* in, size_t inlen,
+            const void* key, size_t keylen);
+
 ::testing::AssertionResult CompareArray(uint8_t* hash, uint8_t* correct) {
   for (size_t i = 0; i < BLAKE2B_OUTBYTES; ++i) {
     if (hash[i] != correct[i]) {
@@ -53,6 +56,16 @@ TEST_F(KnownAnswerTests, Unkeyed) {
     blake2b(values->hash, BLAKE2B_OUTBYTES, values->buf, i, values->key, 0);
     memcpy(values->correct, blake2b_kat[i], BLAKE2B_OUTBYTES);
 
+    EXPECT_TRUE(CompareArray(values->hash, values->correct));
+  }
+
+}
+
+TEST_F(KnownAnswerTests, Keyed) {
+  for (size_t i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
+    blake2b(values->hash, BLAKE2B_OUTBYTES, values->buf, i, values->key, BLAKE2B_OUTBYTES);
+    memcpy(values->correct, blake2b_keyed_kat[i], BLAKE2B_OUTBYTES);
+    
     EXPECT_TRUE(CompareArray(values->hash, values->correct));
   }
 
