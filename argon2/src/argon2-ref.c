@@ -10,7 +10,7 @@
 #define MULT64(x , y) ( 2 * ( x & UINT64_C(0xFFFFFFFF) ) * ( y & UINT64_C(0xFFFFFFFF) ) );
 
 /**
- * The blake2s mixing function like macro mixes two 8-byte words from the message
+ * The blake2 mixing function like macro mixes two 8-byte words from the message
  * into the hash state
  *
  * @params  a, b, c, d  indices to 8-byte word entries from the work vector V
@@ -120,6 +120,13 @@ static void next_addresses(block *address_block, block *input_block, const block
     fill_block(zero_block, address_block, address_block, 0);
 }
 
+/**
+ * Function that fills the segment using previous segments also from other threads
+ * @param context current context
+ * @param instance Pointer to the current instance
+ * @param position Current position
+ * @pre all block pointers must be valid
+ */
 
 void fill_segment(const argon2_instance_t *instance, argon2_position_t position)
 {
