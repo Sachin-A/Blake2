@@ -72,4 +72,6 @@ extern void blake2b_final(blake2b_state* state, void* out, size_t outlen);
 extern void blake2b(void* out, size_t outlen, const void* in, size_t inlen,
             const void* key, size_t keylen);
 
+extern int blake2b_long(void *out, size_t outlen, const void *in, size_t inlen);
+
 #endif /* BLAKE_H */

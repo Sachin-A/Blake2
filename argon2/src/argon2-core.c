@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include "argon2-core.h"
+#include "../blake2b/include/blake2b.h"
 
 
 /**
@@ -463,7 +464,7 @@ static void *fill_segment_thr(void *thread_data)
  * @return ARGON2_OK if successful, @context->state
  */
 
- 
+
 int fill_memory_blocks(argon2_instance_t *instance) 
 {
     uint32_t r, s;

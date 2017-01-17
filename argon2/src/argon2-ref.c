@@ -4,8 +4,7 @@
 
 #include "argon2.h"
 #include "argon2-ref.h"
-
-#include "../blake2/blake2.h"
+#include "../blake2b/include/blake2b.h"
 
 #define MULT64(x , y) ( 2 * ( x & UINT64_C(0xFFFFFFFF) ) * ( y & UINT64_C(0xFFFFFFFF) ) );
 
