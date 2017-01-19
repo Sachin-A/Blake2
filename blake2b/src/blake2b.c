@@ -290,7 +290,8 @@ int blake2b_long(void *pout, size_t outlen, const void *in, size_t inlen) {
     int ret = -1;
 
     if (outlen > UINT32_MAX) {
-        goto fail;
+        clear_internal_memory(&blake_state, sizeof(blake_state));
+        return ret;
     }
     store32(outlen_bytes, (uint32_t)outlen);
 
@@ -298,7 +299,8 @@ int blake2b_long(void *pout, size_t outlen, const void *in, size_t inlen) {
     do {                                                                       \
         ret = statement;                                                       \
         if (ret < 0) {                                                         \
-            goto fail;                                                         \
+            clear_internal_memory(&blake_state, sizeof(blake_state));          \
+            return ret;                                                        \
         }                                                                      \
     } while ((void)0, 0)
 
@@ -333,8 +335,5 @@ int blake2b_long(void *pout, size_t outlen, const void *in, size_t inlen) {
                     0));
         memcpy(out, out_buffer, toproduce);
     }
-fail:
-    clear_internal_memory(&blake_state, sizeof(blake_state));
-    return ret;
 #undef TRY
 }
