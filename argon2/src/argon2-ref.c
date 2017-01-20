@@ -4,9 +4,17 @@
 
 #include "argon2.h"
 #include "argon2-ref.h"
-#include "../blake2b/include/blake2b.h"
+#include "blake2b.h"
 
 #define MULT64(x , y) ( 2 * ( x & UINT64_C(0xFFFFFFFF) ) * ( y & UINT64_C(0xFFFFFFFF) ) );
+
+/**
+ * Helper macro to perform rotation in a 64 bit int
+ *
+ * @param[in]  w     original word
+ * @param[in]  c     offset to rotate by
+ */
+#define ROTR64(w, c) ((w) >> (c)) | ((w) << (64 - (c)))
 
 /**
  * The blake2 mixing function like macro mixes two 8-byte words from the message
@@ -18,13 +26,13 @@
 #define G(a, b, c, d)                                                          \
     do {                                                                       \
         a = a + b + MULT64(a,b);                                               \
-        d = rotr64(d ^ a, 32);                                                 \
+        d = ROTR64(d ^ a, 32);                                                 \
         c = c + d + MULT64(c,d);                                               \
-        b = rotr64(b ^ c, 24);                                                 \
+        b = ROTR64(b ^ c, 24);                                                 \
         a = a + b + MULT64(a,b);                                               \
-        d = rotr64(d ^ a, 16);                                                 \
+        d = ROTR64(d ^ a, 16);                                                 \
         c = c + d + MULT64(c,d);                                               \
-        b = rotr64(b ^ c, 63);                                                 \
+        b = ROTR64(b ^ c, 63);                                                 \
     } while (0)
 
 #define BLAKE2_ROUND(v0, v1, v2, v3, v4, v5, v6, v7, v8,					   \

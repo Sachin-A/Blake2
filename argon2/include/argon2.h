@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include <limits.h>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 /* TODO */
 /* Argon2 Input Restrictions */
@@ -168,7 +171,7 @@ typedef struct Argon2_state {
     deallocate_fptr free_cbk;   /* pointer to memory deallocator */
 
     uint32_t flags; /* array of bool options */
-} argon2_state;
+} argon2_context;
 
 /*
  * Argon2 primitive type 
@@ -203,7 +206,8 @@ const char *argon2_type2string(argon2_type type, int uppercase);
  * @param  context  Pointer to the Argon2 internal structure
  * @return Error code if smth is wrong, ARGON2_OK otherwise
  */
-int argon2_state(argon2_state *state, argon2_type type);
+
+int argon2_ctx(argon2_context *context, argon2_type type);
 
 /**
  * Hashes a password with Argon2i, producing an encoded hash
@@ -315,7 +319,8 @@ int argon2_verify(const char *encoded, const void *pwd,
  * @param  context  Pointer to current Argon2 context
  * @return  Zero if successful, a non zero error code otherwise
  */
-int argon2d_ctx(argon2_state *state);
+
+int argon2d_ctx(argon2_context *context);
 
 /**
  * Argon2i: Version of Argon2 that picks memory blocks
@@ -325,7 +330,8 @@ int argon2d_ctx(argon2_state *state);
  * @param  context  Pointer to current Argon2 context
  * @return  Zero if successful, a non zero error code otherwise
  */
-int argon2i_ctx(argon2_state *state);
+
+int argon2i_ctx(argon2_context *context);
 
 /**
  * Argon2id: Version of Argon2 where the first half-pass over memory is
@@ -336,7 +342,8 @@ int argon2i_ctx(argon2_state *state);
  * @param  context  Pointer to current Argon2 context
  * @return  Zero if successful, a non zero error code otherwise
  */
-int argon2id_ctx(argon2_state *state);
+
+int argon2id_ctx(argon2_context *context);
 
 /**
  * Verify if a given password is correct for Argon2d hashing
@@ -345,7 +352,8 @@ int argon2id_ctx(argon2_state *state);
  * specified by the context outlen member
  * @return  Zero if successful, a non zero error code otherwise
  */
-int argon2d_verify_ctx(argon2_state *state, const char *hash);
+
+int argon2d_verify_ctx(argon2_context *context, const char *hash);
 
 /**
  * Verify if a given password is correct for Argon2i hashing
@@ -354,7 +362,8 @@ int argon2d_verify_ctx(argon2_state *state, const char *hash);
  * specified by the context outlen member
  * @return  Zero if successful, a non zero error code otherwise
  */
-int argon2i_verify_ctx(argon2_state *state, const char *hash);
+
+int argon2i_verify_ctx(argon2_context *context, const char *hash);
 
 /**
  * Verify if a given password is correct for Argon2id hashing
@@ -363,12 +372,12 @@ int argon2i_verify_ctx(argon2_state *state, const char *hash);
  * specified by the context outlen member
  * @return  Zero if successful, a non zero error code otherwise
  */
-int argon2id_verify_ctx(argon2_state *state,
-                                      const char *hash);
 
-/* Generic verify context/state */
-int argon2_verify_ctx(argon2_state *state, const char *hash,
-                                    argon2_type type);
+int argon2id_verify_ctx(argon2_context *context, const char *hash);
+
+/* generic function underlying the above ones */
+
+int argon2_verify_ctx(argon2_context *context, const char *hash, argon2_type type);
 
 /**
  * Get the associated error message for given error code
@@ -389,5 +398,9 @@ const char *argon2_error_message(int error_code);
 size_t argon2_encodedlen(uint32_t t_cost, uint32_t m_cost,
                                        uint32_t parallelism, uint32_t saltlen,
                                        uint32_t hashlen, argon2_type type);
+
+#if defined(__cplusplus)
+}
+#endif 
 
 #endif

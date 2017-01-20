@@ -1,5 +1,5 @@
-#include "blake2b.h"
-#include "blake2b_kat.h"
+#include <blake2b.h>
+#include <blake2b_kat.h>
 #include <stdio.h>
 #include <string.h>
 

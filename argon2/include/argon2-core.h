@@ -2,6 +2,7 @@
 #define ARGON2_CORE_H
 
 #include "argon2.h"
+#include <pthread.h>
 
 enum argon2_core_constants {
     ARGON2_BLOCK_SIZE = 1024,
@@ -15,6 +16,8 @@ enum argon2_core_constants {
 #define ARGON2_MAX_DECODED_LANES UINT32_C(255)
 #define ARGON2_MIN_DECODED_SALT_LEN UINT32_C(8)
 #define ARGON2_MIN_DECODED_OUT_LEN UINT32_C(12)
+#define CONST_CAST(x) (x)(uintptr_t)
+
 
 int encode_string(char *dst, size_t dst_len, argon2_context *ctx, argon2_type type);
 int decode_string(argon2_context *ctx, const char *str, argon2_type type);
@@ -34,14 +37,6 @@ void init_block_value(block *b, uint8_t in);
 void copy_block(block *dst, const block *src);
 void xor_block(block *dst, const block *src);
 
-/**
- * Struct that holds the inputs for thread handling FillSegment
- */
-
-typedef struct Argon2_thread_data {
-    argon2_instance_t *instance_ptr;
-    argon2_position_t pos;
-} argon2_thread_data;
 
 /**
  * Argon2 instance: memory pointer, number of passes, amount of memory, type,
@@ -76,6 +71,14 @@ typedef struct Argon2_position_t {
     uint32_t index;
 } argon2_position_t;
 
+/**
+ * Struct that holds the inputs for thread handling FillSegment
+ */
+
+typedef struct Argon2_thread_data {
+    argon2_instance_t *instance_ptr;
+    argon2_position_t pos;
+} argon2_thread_data;
 
 /**
  * Argon2 Core Functions
