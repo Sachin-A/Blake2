@@ -4,6 +4,7 @@
 
 #include "argon2.h"
 #include "argon2-core.h"
+#include "argon2-ref.h"
 
 const char *argon2_type2string(argon2_type type, int uppercase) {
     switch (type) {
@@ -20,9 +21,9 @@ const char *argon2_type2string(argon2_type type, int uppercase) {
 
 int argon2_ctx(argon2_state *state, argon2_type type) {
     /* 1. Validate inputs */
-    int result = state; // Use validation function validate_inputs here and return to result
+    int result = state; 
     uint32_t memory_blocks, segment_length;
-    argon2_instance_t instance; // Where is this defined?
+    argon2_instance_t instance;
 
     if (ARGON2_OK != result) {
         return result;

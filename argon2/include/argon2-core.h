@@ -12,11 +12,14 @@ enum argon2_core_constants {
     ARGON2_PREHASH_SEED_LENGTH = 72
 };
 
+#define ARGON2_MAX_DECODED_LANES UINT32_C(255)
+#define ARGON2_MIN_DECODED_SALT_LEN UINT32_C(8)
+#define ARGON2_MIN_DECODED_OUT_LEN UINT32_C(12)
 
-typedef struct block_ { uint64_t v[ARGON2_QWORDS_IN_BLOCK]; } block;
-void init_block_value(block *b, uint8_t in);
-void copy_block(block *dst, const block *src);
-void xor_block(block *dst, const block *src);
+int encode_string(char *dst, size_t dst_len, argon2_context *ctx, argon2_type type);
+int decode_string(argon2_context *ctx, const char *str, argon2_type type);
+size_t b64len(uint32_t len);
+size_t numlen(uint32_t num);
 
 typedef void *(*argon2_thread_func_t)(void *);
 typedef pthread_t argon2_thread_handle_t;
@@ -25,14 +28,22 @@ int argon2_thread_create(argon2_thread_handle_t *handle, argon2_thread_func_t fu
 int argon2_thread_join(argon2_thread_handle_t handle);
 void argon2_thread_exit(void) ;
 
-/*Struct that holds the inputs for thread handling FillSegment*/
+
+typedef struct block_ { uint64_t v[ARGON2_QWORDS_IN_BLOCK]; } block;
+void init_block_value(block *b, uint8_t in);
+void copy_block(block *dst, const block *src);
+void xor_block(block *dst, const block *src);
+
+/**
+ * Struct that holds the inputs for thread handling FillSegment
+ */
 
 typedef struct Argon2_thread_data {
     argon2_instance_t *instance_ptr;
     argon2_position_t pos;
 } argon2_thread_data;
 
-/*
+/**
  * Argon2 instance: memory pointer, number of passes, amount of memory, type,
  * and derived values.
  * Used to evaluate the number and location of blocks to construct in each
@@ -53,7 +64,7 @@ typedef struct Argon2_instance_t {
     argon2_context *context_ptr; /* points back to original context */
 } argon2_instance_t;
 
-/*
+/**
  * Argon2 position: where we construct the block right now. Used to distribute
  * work between threads.
  */

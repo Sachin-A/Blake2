@@ -15,23 +15,24 @@
  * @param[out]  src   the source
  */
 
-static uint64_t load64(const void *src) {
-#if defined(NATIVE_LITTLE_ENDIAN)
-    uint64_t w;
-    memcpy(&w, src, sizeof w);
-    return w;
-#else
-    const uint8_t *p = (const uint8_t *)src;
-    uint64_t w = *p++;
-    w |= (uint64_t)(*p++) << 8;
-    w |= (uint64_t)(*p++) << 16;
-    w |= (uint64_t)(*p++) << 24;
-    w |= (uint64_t)(*p++) << 32;
-    w |= (uint64_t)(*p++) << 40;
-    w |= (uint64_t)(*p++) << 48;
-    w |= (uint64_t)(*p++) << 56;
-    return w;
-#endif
+static uint64_t load64(const void *src) 
+{
+    #if defined(NATIVE_LITTLE_ENDIAN)
+        uint64_t w;
+        memcpy(&w, src, sizeof w);
+        return w;
+    #else
+        const uint8_t *p = (const uint8_t *)src;
+        uint64_t w = *p++;
+        w |= (uint64_t)(*p++) << 8;
+        w |= (uint64_t)(*p++) << 16;
+        w |= (uint64_t)(*p++) << 24;
+        w |= (uint64_t)(*p++) << 32;
+        w |= (uint64_t)(*p++) << 40;
+        w |= (uint64_t)(*p++) << 48;
+        w |= (uint64_t)(*p++) << 56;
+        return w;
+    #endif
 }
 
 
@@ -43,19 +44,20 @@ static uint64_t load64(const void *src) {
  * @param[in]  w     word to be stored
  */
  
-static void store32(void *dst, uint32_t w) {
-#if defined(NATIVE_LITTLE_ENDIAN)
-    memcpy(dst, &w, sizeof w);
-#else
-    uint8_t *p = (uint8_t *)dst;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-#endif
+static void store32(void *dst, uint32_t w) 
+{
+    #if defined(NATIVE_LITTLE_ENDIAN)
+        memcpy(dst, &w, sizeof w);
+    #else
+        uint8_t *p = (uint8_t *)dst;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+    #endif
 }
 
 
@@ -66,29 +68,289 @@ static void store32(void *dst, uint32_t w) {
  * @param[in]  w     word to be stored
  */
  
-static void store64(void *dst, uint64_t w) {
-#if defined(NATIVE_LITTLE_ENDIAN)
-    memcpy(dst, &w, sizeof w);
-#else
-    uint8_t *p = (uint8_t *)dst;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-    w >>= 8;
-    *p++ = (uint8_t)w;
-#endif
+static void store64(void *dst, uint64_t w) 
+{
+    #if defined(NATIVE_LITTLE_ENDIAN)
+        memcpy(dst, &w, sizeof w);
+    #else
+        uint8_t *p = (uint8_t *)dst;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+        w >>= 8;
+        *p++ = (uint8_t)w;
+    #endif
 }
 
+#define EQ(x, y) ((((0U - ((unsigned)(x) ^ (unsigned)(y))) >> 8) & 0xFF) ^ 0xFF)
+#define GT(x, y) ((((unsigned)(y) - (unsigned)(x)) >> 8) & 0xFF)
+#define GE(x, y) (GT(y, x) ^ 0xFF)
+#define LT(x, y) GT(y, x)
+#define LE(x, y) GE(y, x)
+
+/**
+ * Decodes an Argon2 hash string into the provided structure 'ctx'.
+ * The only fields that must be set prior to this call are ctx.saltlen and
+ * ctx.outlen (which must be the maximal salt and out length values that are
+ * allowed), ctx.salt and ctx.out (which must be buffers of the specified
+ * length), and ctx.pwd and ctx.pwdlen which must hold a valid password.
+ *
+ * Invalid input string causes an error. On success, the ctx is valid and all
+ * fields have been initialized.
+ *
+ * Returned value is ARGON2_OK on success, other ARGON2_ codes on error.
+ */
+
+int decode_string(argon2_context *ctx, const char *str, argon2_type type) 
+{
+    /**
+     * check for prefix 
+     */
+
+    #define CC(prefix)                                                             \
+        do {                                                                       \
+            size_t cc_len = strlen(prefix);                                        \
+            if (strncmp(str, prefix, cc_len) != 0) {                               \
+                return ARGON2_DECODING_FAIL;                                       \
+            }                                                                      \
+            str += cc_len;                                                         \
+        } while ((void)0, 0)
+
+    /**
+     * optional prefix checking with supplied code 
+     */
+
+    #define CC_opt(prefix, code)                                                   \
+        do {                                                                       \
+            size_t cc_len = strlen(prefix);                                        \
+            if (strncmp(str, prefix, cc_len) == 0) {                               \
+                str += cc_len;                                                     \
+                { code; }                                                          \
+            }                                                                      \
+        } while ((void)0, 0)
+
+    /**
+     * Decoding prefix into decimal 
+     */
+
+    #define DECIMAL(x)                                                             \
+        do {                                                                       \
+            unsigned long dec_x;                                                   \
+            str = decode_decimal(str, &dec_x);                                     \
+            if (str == NULL) {                                                     \
+                return ARGON2_DECODING_FAIL;                                       \
+            }                                                                      \
+            (x) = dec_x;                                                           \
+        } while ((void)0, 0)
+
+    /**
+     * Decoding base64 into a binary buffer 
+     */
+
+    #define BIN(buf, max_len, len)                                                 \
+        do {                                                                       \
+            size_t bin_len = (max_len);                                            \
+            str = from_base64(buf, &bin_len, str);                                 \
+            if (str == NULL || bin_len > UINT32_MAX) {                             \
+                return ARGON2_DECODING_FAIL;                                       \
+            }                                                                      \
+            (len) = (uint32_t)bin_len;                                             \
+        } while ((void)0, 0)
+
+        size_t maxsaltlen = ctx->saltlen;
+        size_t maxoutlen = ctx->outlen;
+        int validation_result;
+        const char* type_string;
+
+        /**
+         * We should start with the argon2_type we are using 
+         */
+
+        type_string = argon2_type2string(type, 0);
+        if (!type_string) {
+            return ARGON2_INCORRECT_TYPE;
+        }
+
+        CC("$");
+        CC(type_string);
+
+        /**
+         * Reading the version number if the default is suppressed 
+         */
+        
+        ctx->version = ARGON2_VERSION_10;
+        CC_opt("$v=", DECIMAL(ctx->version));
+
+        CC("$m=");
+        DECIMAL(ctx->m_cost);
+        CC(",t=");
+        DECIMAL(ctx->t_cost);
+        CC(",p=");
+        DECIMAL(ctx->lanes);
+        ctx->threads = ctx->lanes;
+
+        CC("$");
+        BIN(ctx->salt, maxsaltlen, ctx->saltlen);
+        CC("$");
+        BIN(ctx->out, maxoutlen, ctx->outlen);
+
+        /**
+         * The rest of the fields get the default values 
+         */
+        
+        ctx->secret = NULL;
+        ctx->secretlen = 0;
+        ctx->ad = NULL;
+        ctx->adlen = 0;
+        ctx->allocate_cbk = NULL;
+        ctx->free_cbk = NULL;
+        ctx->flags = ARGON2_DEFAULT_FLAGS;
+
+        /**
+         * On return, must have valid context 
+         */
+        
+        validation_result = validate_inputs(ctx);
+        if (validation_result != ARGON2_OK) {
+            return validation_result;
+        }
+
+        /**
+         * Can't have any additional characters 
+         */
+        
+        if (*str == 0) {
+            return ARGON2_OK;
+        } else {
+            return ARGON2_DECODING_FAIL;
+        }
+    #undef CC
+    #undef CC_opt
+    #undef DECIMAL
+    #undef BIN
+}
+
+/**
+ * encode an Argon2 hash string into the provided buffer. 'dst_len'
+ * contains the size, in characters, of the 'dst' buffer; if 'dst_len'
+ * is less than the number of required characters (including the
+ * terminating 0), then this function returns ARGON2_ENCODING_ERROR.
+ *
+ * on success, ARGON2_OK is returned.
+ */
+int encode_string(char *dst, size_t dst_len, argon2_context *ctx, argon2_type type) 
+{
+
+    #define SS(str)                                                                \
+        do {                                                                       \
+            size_t pp_len = strlen(str);                                           \
+            if (pp_len >= dst_len) {                                               \
+                return ARGON2_ENCODING_FAIL;                                       \
+            }                                                                      \
+            memcpy(dst, str, pp_len + 1);                                          \
+            dst += pp_len;                                                         \
+            dst_len -= pp_len;                                                     \
+        } while ((void)0, 0)
+
+    #define SX(x)                                                                  \
+        do {                                                                       \
+            char tmp[30];                                                          \
+            sprintf(tmp, "%lu", (unsigned long)(x));                               \
+            SS(tmp);                                                               \
+        } while ((void)0, 0)
+
+    #define SB(buf, len)                                                           \
+        do {                                                                       \
+            size_t sb_len = to_base64(dst, dst_len, buf, len);                     \
+            if (sb_len == (size_t)-1) {                                            \
+                return ARGON2_ENCODING_FAIL;                                       \
+            }                                                                      \
+            dst += sb_len;                                                         \
+            dst_len -= sb_len;                                                     \
+        } while ((void)0, 0)
+
+        const char* type_string = argon2_type2string(type, 0);
+        int validation_result = validate_inputs(ctx);
+
+        if (!type_string) {
+          return ARGON2_ENCODING_FAIL;
+        }
+
+        if (validation_result != ARGON2_OK) {
+          return validation_result;
+        }
+
+
+        SS("$");
+        SS(type_string);
+
+        SS("$v=");
+        SX(ctx->version);
+
+        SS("$m=");
+        SX(ctx->m_cost);
+        SS(",t=");
+        SX(ctx->t_cost);
+        SS(",p=");
+        SX(ctx->lanes);
+
+        SS("$");
+        SB(ctx->salt, ctx->saltlen);
+
+        SS("$");
+        SB(ctx->out, ctx->outlen);
+        return ARGON2_OK;
+
+    #undef SS
+    #undef SX
+    #undef SB
+}
+
+/**
+ * Returns the length of the encoded byte stream with length len 
+ */
+
+size_t b64len(uint32_t len) 
+{
+    size_t olen = ((size_t)len / 3) << 2;
+
+    switch (len % 3) {
+    case 2:
+        olen++;
+    /**
+     * fall through 
+     */
+    case 1:
+        olen += 2;
+        break;
+    }
+
+    return olen;
+}
+
+/**
+ * Returns the length of the encoded number num 
+ */
+
+size_t numlen(uint32_t num) 
+{
+    size_t len = 1;
+    while (num >= 10) {
+        ++len;
+        num = num / 10;
+    }
+    return len;
+}
 
 /**
  * Creates a thread
