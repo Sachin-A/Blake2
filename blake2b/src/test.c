@@ -16,10 +16,23 @@ print_hex(const uint8_t* hash, char* string, int len)
   printf("\n\n");
 }
 
-int
-main(int argc, char const* argv[])
+/**
+ * The main blake2b function
+ */
+void
+blake2b(void* output, size_t outlen, const void* input, size_t inlen,
+        const void* key, size_t keylen)
 {
+  blake2b_state state = { 0 };
 
+  blake2b_init(&state, outlen, key, keylen);
+  blake2b_update(&state, (const uint8_t*)input, inlen);
+  blake2b_final(&state, output, outlen);
+}
+
+int
+main()
+{
   uint8_t key[BLAKE2B_KEYBYTES];
   uint8_t buf[BLAKE2_KAT_LENGTH];
   uint8_t hash[BLAKE2B_OUTBYTES];
