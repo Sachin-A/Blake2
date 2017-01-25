@@ -36,8 +36,6 @@ static uint64_t load64(const void *src)
     #endif
 }
 
-
-
 /**
  * Stores w into dst
  *
@@ -256,6 +254,7 @@ static const char *decode_decimal(const char *str, unsigned long *v) {
     *v = acc;
     return str;
 }
+
 /**
  * Decodes an Argon2 hash string into the provided structure 'ctx'.
  * The only fields that must be set prior to this call are ctx.saltlen and
@@ -406,6 +405,7 @@ int decode_string(argon2_context *ctx, const char *str, argon2_type type)
  *
  * on success, ARGON2_OK is returned.
  */
+
 int encode_string(char *dst, size_t dst_len, argon2_context *ctx, argon2_type type) 
 {
 
@@ -1045,7 +1045,7 @@ void initial_hash(uint8_t *blockhash, argon2_context *context, argon2_type type)
         return;
     }
 
-    blake2b_init(&BlakeHash, ARGON2_PREHASH_DIGEST_LENGTH, key , 0);
+    blake2b_init(&BlakeHash, ARGON2_PREHASH_DIGEST_LENGTH);
 
     store32(&value, context->lanes);
     blake2b_update(&BlakeHash, (const uint8_t *)&value, sizeof(value));

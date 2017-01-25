@@ -18,7 +18,6 @@ enum argon2_core_constants {
 #define ARGON2_MIN_DECODED_OUT_LEN UINT32_C(12)
 #define CONST_CAST(x) (x)(uintptr_t)
 
-
 int encode_string(char *dst, size_t dst_len, argon2_context *ctx, argon2_type type);
 int decode_string(argon2_context *ctx, const char *str, argon2_type type);
 size_t b64len(uint32_t len);
@@ -30,7 +29,6 @@ typedef pthread_t argon2_thread_handle_t;
 int argon2_thread_create(argon2_thread_handle_t *handle, argon2_thread_func_t func, void *args);
 int argon2_thread_join(argon2_thread_handle_t handle);
 void argon2_thread_exit(void) ;
-
 
 typedef struct block_ { uint64_t v[ARGON2_QWORDS_IN_BLOCK]; } block;
 void init_block_value(block *b, uint8_t in);

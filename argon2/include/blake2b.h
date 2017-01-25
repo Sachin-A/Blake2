@@ -62,16 +62,24 @@ typedef struct blake2b_state
   uint64_t f[2];                   /* last block flag */
   uint8_t buf[BLAKE2B_BLOCKBYTES]; /* input buffer */
   size_t buflen;                   /* size of buffer */
-  size_t outlen;                   /* digest size */
+  size_t outlen;
+  uint8_t last_node;                   /* digest size */
 } blake2b_state;
 
-extern void blake2b_init(blake2b_state* state, size_t outlen, const void* key,
-                 size_t keylen);
-extern void blake2b_update(blake2b_state* state, const unsigned char* in, size_t inlen);
-extern void blake2b_final(blake2b_state* state, void* out, size_t outlen);
-extern void blake2b(void* out, size_t outlen, const void* in, size_t inlen,
-            const void* key, size_t keylen);
+/* Streaming API */
+int blake2b_init(blake2b_state *S, size_t outlen);
+int blake2b_init_key(blake2b_state *S, size_t outlen, const void *key,
+                     size_t keylen);
+int blake2b_init_param(blake2b_state *S, const blake2b_param *P);
+int blake2b_update(blake2b_state *S, const void *in, size_t inlen);
+int blake2b_final(blake2b_state *S, void *out, size_t outlen);
 
-extern int blake2b_long(void *out, size_t outlen, const void *in, size_t inlen);
+/* Simple API */
+int blake2b(void *out, size_t outlen, const void *in, size_t inlen,
+            const void *key, size_t keylen);
+
+/* Argon2 Team - Begin Code */
+int blake2b_long(void *out, size_t outlen, const void *in, size_t inlen);
+/* Argon2 Team - End Code */
 
 #endif /* BLAKE_H */

@@ -1,340 +1,432 @@
-#include "blake2b.h"
-#include "argon2-core.h"
-#include <math.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
 
-/**
- * Helper macro to perform rotation in a 64 bit int
- *
- * @param[in]  w     original word
- * @param[in]  c     offset to rotate by
- */
-#define ROTR64(w, c) ((w) >> (c)) | ((w) << (64 - (c)))
+#include "blake2b.h"
 
-/**
- * Helper macro to load into src 64 bytes at a time
- *
- * @param[in]  dest  the destination
- * @param[in]  src   the source
- */
+static uint32_t rotr32(const uint32_t w, const unsigned c) {
+    return (w >> c) | (w << (32 - c));
+}
+
+static uint64_t rotr64(const uint64_t w, const unsigned c) {
+    return (w >> c) | (w << (64 - c));
+}
+
+void clear_internal_memory(void *v, size_t n);
+
+static uint32_t load32(const void *src) {
 #if defined(NATIVE_LITTLE_ENDIAN)
-  #define LOAD64(dest, src) memcpy(&(dest), (src), sizeof (dest))
+    uint32_t w;
+    memcpy(&w, src, sizeof w);
+    return w;
 #else
-  #define LOAD64(dest, src)                                          \
-    do {                                                             \
-    const uint8_t* load = (const uint8_t*)(src);                     \
-    dest = ((uint64_t)(load[0]) << 0) | ((uint64_t)(load[1]) << 8) | \
-    ((uint64_t)(load[2]) << 16) | ((uint64_t)(load[3]) << 24) |      \
-    ((uint64_t)(load[4]) << 32) | ((uint64_t)(load[5]) << 40) |      \
-    ((uint64_t)(load[6]) << 48) | ((uint64_t)(load[7]) << 56);       \
-    } while(0)
-#endif
-
-/**
- * Stores w into dst
- *
- * @param      dst   the destination
- * @param[in]  w     word to be stored
- */
-void
-store64(uint8_t* dst, uint64_t w)
-{
-#if defined(NATIVE_LITTLE_ENDIAN)
-  memcpy(dst, &w, sizeof w);
-#else
-  uint8_t* p = dst;
-
-  p[0] = (uint8_t)(w >> 0);
-  p[1] = (uint8_t)(w >> 8);
-  p[2] = (uint8_t)(w >> 16);
-  p[3] = (uint8_t)(w >> 24);
-  p[4] = (uint8_t)(w >> 32);
-  p[5] = (uint8_t)(w >> 40);
-  p[6] = (uint8_t)(w >> 48);
-  p[7] = (uint8_t)(w >> 56);
+    const uint8_t *p = (const uint8_t *)src;
+    uint32_t w = *p++;
+    w |= (uint32_t)(*p++) << 8;
+    w |= (uint32_t)(*p++) << 16;
+    w |= (uint32_t)(*p++) << 24;
+    return w;
 #endif
 }
 
-void
-store32(uint8_t* dst, uint32_t w)
-{
+static uint64_t load64(const void *src) {
 #if defined(NATIVE_LITTLE_ENDIAN)
-  memcpy(dst, &w, sizeof w);
+    uint64_t w;
+    memcpy(&w, src, sizeof w);
+    return w;
 #else
-  uint8_t* p = dst;
-
-  p[0] = (uint8_t)(w >> 0);
-  p[1] = (uint8_t)(w >> 8);
-  p[2] = (uint8_t)(w >> 16);
-  p[3] = (uint8_t)(w >> 24);
+    const uint8_t *p = (const uint8_t *)src;
+    uint64_t w = *p++;
+    w |= (uint64_t)(*p++) << 8;
+    w |= (uint64_t)(*p++) << 16;
+    w |= (uint64_t)(*p++) << 24;
+    w |= (uint64_t)(*p++) << 32;
+    w |= (uint64_t)(*p++) << 40;
+    w |= (uint64_t)(*p++) << 48;
+    w |= (uint64_t)(*p++) << 56;
+    return w;
 #endif
 }
 
-/**
- * Increments the blake2b state counter
- *
- * @param      S     blake2b_state instance
- * @param[in]  inc   the increment value
- */
-void
-blake2b_increment_counter(blake2b_state* state, const uint64_t inc)
-{
-  state->t[0] += inc;
-  state->t[1] += (state->t[0] < inc);
+static void store32(void *dst, uint32_t w) {
+#if defined(NATIVE_LITTLE_ENDIAN)
+    memcpy(dst, &w, sizeof w);
+#else
+    uint8_t *p = (uint8_t *)dst;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+#endif
 }
 
-/**
- * The blake2b mixing function like macro mixes two 8-byte words from the message
- * into the hash state
- *
- * @params  a, b, c, d  indices to 8-byte word entries from the work vector V
- * @params  x, y        two 8-byte word entries from padded message v
- */
-#define G(a, b, c, d, x, y)       \
-  do {                            \
-  a = a + b + x;                  \
-  d = ROTR64(d ^ a, 32);          \
-  c = c + d;                      \
-  b = ROTR64(b ^ c, 24);          \
-  a = a + b + y;                  \
-  d = ROTR64(d ^ a, 16);          \
-  c = c + d;                      \
-  b = ROTR64(b ^ c, 63);          \
-  }while(0)
+static void store64(void *dst, uint64_t w) {
+#if defined(NATIVE_LITTLE_ENDIAN)
+    memcpy(dst, &w, sizeof w);
+#else
+    uint8_t *p = (uint8_t *)dst;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+    w >>= 8;
+    *p++ = (uint8_t)w;
+#endif
+}
 
-/**
- * The blake2b compress function which takes a full 128-byte chunk of the
- * input message and mixes it into the ongoing state array
- *
- * @param      state  blake2b_state instance
- * @param      block  the input block
- */
-static void
-F(blake2b_state* state, const uint8_t block[BLAKE2B_BLOCKBYTES])
-{
-  size_t i, j;
-  uint64_t v[16], m[16], s[16];
+static void blake2b_set_lastnode(blake2b_state *S) {
+    S->f[1] = (uint64_t)-1;
+}
 
-  for (i = 0; i < 16; ++i) {
-    LOAD64(m[i], block + i * sizeof(m[i]));
-  }
-
-  for (i = 0; i < 8; ++i) {
-    v[i] = state->h[i];
-    v[i + 8] = blake2b_IV[i];
-  }
-
-  v[12] ^= state->t[0];
-  v[13] ^= state->t[1];
-  v[14] ^= state->f[0];
-  v[15] ^= state->f[1];
-
-  for (i = 0; i < 12; i++) {
-    for (j = 0; j < 16; j++) {
-      s[j] = blake2b_sigma[i][j];
+static void blake2b_set_lastblock(blake2b_state *S) {
+    if (S->last_node) {
+        blake2b_set_lastnode(S);
     }
-    G(v[0], v[4], v[8], v[12], m[s[0]], m[s[1]]);
-    G(v[1], v[5], v[9], v[13], m[s[2]], m[s[3]]);
-    G(v[2], v[6], v[10], v[14], m[s[4]], m[s[5]]);
-    G(v[3], v[7], v[11], v[15], m[s[6]], m[s[7]]);
-    G(v[0], v[5], v[10], v[15], m[s[8]], m[s[9]]);
-    G(v[1], v[6], v[11], v[12], m[s[10]], m[s[11]]);
-    G(v[2], v[7], v[8], v[13], m[s[12]], m[s[13]]);
-    G(v[3], v[4], v[9], v[14], m[s[14]], m[s[15]]);
-  }
-
-  for (i = 0; i < 8; i++) {
-    state->h[i] = state->h[i] ^ v[i] ^ v[i + 8];
-  }
+    S->f[0] = (uint64_t)-1;
 }
 
-/**
- * Initializes blake2b state
- *
- * @param      state   blake2b_state instance passed by reference
- * @param[in]  outlen  the hash output length
- */
-void
-blake2b_init(blake2b_state* state, size_t outlen, const void* key, size_t keylen)
-{
-  blake2b_param P = {0};
-  const uint8_t* p;
-  size_t i;
-  uint64_t dest;
+static void blake2b_increment_counter(blake2b_state *S,
+                                                    uint64_t inc) {
+    S->t[0] += inc;
+    S->t[1] += (S->t[0] < inc);
+}
 
-  P.digest_length = (uint8_t)outlen;
-  if(keylen > 0) {
+static void blake2b_invalidate_state(blake2b_state *S) {
+    clear_internal_memory(S, sizeof(*S));      /* wipe */
+    blake2b_set_lastblock(S); /* invalidate for further use */
+}
+
+static void blake2b_init0(blake2b_state *S) {
+    memset(S, 0, sizeof(*S));
+    memcpy(S->h, blake2b_IV, sizeof(S->h));
+}
+
+int blake2b_init_param(blake2b_state *S, const blake2b_param *P) {
+    const unsigned char *p = (const unsigned char *)P;
+    unsigned int i;
+
+    if (NULL == P || NULL == S) {
+        return -1;
+    }
+
+    blake2b_init0(S);
+    /* IV XOR Parameter Block */
+    for (i = 0; i < 8; ++i) {
+        S->h[i] ^= load64(&p[i * sizeof(S->h[i])]);
+    }
+    S->outlen = P->digest_length;
+    return 0;
+}
+
+/* Sequential blake2b initialization */
+int blake2b_init(blake2b_state *S, size_t outlen) {
+    blake2b_param P;
+
+    if (S == NULL) {
+        return -1;
+    }
+
+    if ((outlen == 0) || (outlen > BLAKE2B_OUTBYTES)) {
+        blake2b_invalidate_state(S);
+        return -1;
+    }
+
+    /* Setup Parameter Block for unkeyed BLAKE2 */
+    P.digest_length = (uint8_t)outlen;
+    P.key_length = 0;
+    P.fanout = 1;
+    P.depth = 1;
+    P.leaf_length = 0;
+    P.node_offset = 0;
+    P.node_depth = 0;
+    P.inner_length = 0;
+    memset(P.reserved, 0, sizeof(P.reserved));
+    memset(P.salt, 0, sizeof(P.salt));
+    memset(P.personal, 0, sizeof(P.personal));
+
+    return blake2b_init_param(S, &P);
+}
+
+int blake2b_init_key(blake2b_state *S, size_t outlen, const void *key,
+                     size_t keylen) {
+    blake2b_param P;
+
+    if (S == NULL) {
+        return -1;
+    }
+
+    if ((outlen == 0) || (outlen > BLAKE2B_OUTBYTES)) {
+        blake2b_invalidate_state(S);
+        return -1;
+    }
+
+    if ((key == 0) || (keylen == 0) || (keylen > BLAKE2B_KEYBYTES)) {
+        blake2b_invalidate_state(S);
+        return -1;
+    }
+
+    /* Setup Parameter Block for keyed BLAKE2 */
+    P.digest_length = (uint8_t)outlen;
     P.key_length = (uint8_t)keylen;
-  }
-  P.fanout = 1;
-  P.depth = 1;
-  store32(( uint8_t * )&P.leaf_length, 0);
-  store64(( uint8_t * )&P.node_offset, 0);
-  P.node_depth = 0;
-  P.inner_length = 0;
-  memset(P.reserved, 0, sizeof(P.reserved));
-  memset(P.salt, 0, sizeof(P.salt));
-  memset(P.personal, 0, sizeof(P.personal));
+    P.fanout = 1;
+    P.depth = 1;
+    P.leaf_length = 0;
+    P.node_offset = 0;
+    P.node_depth = 0;
+    P.inner_length = 0;
+    memset(P.reserved, 0, sizeof(P.reserved));
+    memset(P.salt, 0, sizeof(P.salt));
+    memset(P.personal, 0, sizeof(P.personal));
 
-  dest = 0;
-  p = (const uint8_t*)(&P);
-  for (i = 0; i < 8; ++i) {
-    state->h[i] = blake2b_IV[i];
-  }
-  for (i = 0; i < 8; ++i) {
-    LOAD64(dest, p + sizeof(state->h[i]) * i);
-    state->h[i] ^= dest;
-  }
-  state->outlen = P.digest_length;
-
-  if (keylen > 0) {
-    uint8_t block[BLAKE2B_BLOCKBYTES];
-    memset(block, 0, BLAKE2B_BLOCKBYTES);
-    memcpy(block, key, keylen);
-    blake2b_update(state, block, BLAKE2B_BLOCKBYTES);
-  }
-}
-
-/**
- * Updates blake2b state
- *
- * @param      state         blake2b state instance
- * @param[in]  input_buffer  the input buffer
- * @param[in]  inlen         the input length
- */
-void
-blake2b_update(blake2b_state* state, const unsigned char* input_buffer,
-               size_t inlen)
-{
-  const unsigned char* in = input_buffer;
-  size_t left;
-  size_t fill;
-
-  if( inlen > 0 )
-  {
-    left = state->buflen;
-    fill = BLAKE2B_BLOCKBYTES - left;
-    
-    if( inlen > fill )
-    {
-      state->buflen = 0;
-      memcpy( state->buf + left, in, fill ); /* Fill buffer */
-      blake2b_increment_counter( state, BLAKE2B_BLOCKBYTES );
-      F( state, state->buf ); /* Compress */
-      in += fill; 
-      inlen -= fill;
-
-      while (inlen > BLAKE2B_BLOCKBYTES) {
-        blake2b_increment_counter(state, BLAKE2B_BLOCKBYTES);
-        F(state, in);
-        in += BLAKE2B_BLOCKBYTES;
-        inlen -= BLAKE2B_BLOCKBYTES;
+    if (blake2b_init_param(S, &P) < 0) {
+        blake2b_invalidate_state(S);
+        return -1;
     }
-  }
-  memcpy(state->buf + state->buflen, in, inlen);
-  state->buflen += inlen;
-  }
+
+    {
+        uint8_t block[BLAKE2B_BLOCKBYTES];
+        memset(block, 0, BLAKE2B_BLOCKBYTES);
+        memcpy(block, key, keylen);
+        blake2b_update(S, block, BLAKE2B_BLOCKBYTES);
+        /* Burn the key from stack */
+        clear_internal_memory(block, BLAKE2B_BLOCKBYTES);
+    }
+    return 0;
 }
 
+static void blake2b_compress(blake2b_state *S, const uint8_t *block) {
+    uint64_t m[16];
+    uint64_t v[16];
+    unsigned int i, r;
 
-/**
- * Finalizes state, pads final block and stores hash
- *
- * @param      state  blake2b state instance
- * @param[in]  out    the output buffer
- * @param[in]  inlen  the digest size
- */
+    for (i = 0; i < 16; ++i) {
+        m[i] = load64(block + i * sizeof(m[i]));
+    }
 
-void
-blake2b_final(blake2b_state* state, void* out, size_t outlen)
-{
-  uint8_t buffer[BLAKE2B_OUTBYTES] = { 0 };
-  size_t i;
+    for (i = 0; i < 8; ++i) {
+        v[i] = S->h[i];
+    }
 
-  blake2b_increment_counter(state, state->buflen);
+    v[8] = blake2b_IV[0];
+    v[9] = blake2b_IV[1];
+    v[10] = blake2b_IV[2];
+    v[11] = blake2b_IV[3];
+    v[12] = blake2b_IV[4] ^ S->t[0];
+    v[13] = blake2b_IV[5] ^ S->t[1];
+    v[14] = blake2b_IV[6] ^ S->f[0];
+    v[15] = blake2b_IV[7] ^ S->f[1];
 
-  /* set last chunk = true */
-  state->f[0] = UINT64_MAX;
+#define G(r, i, a, b, c, d)                                                    \
+    do {                                                                       \
+        a = a + b + m[blake2b_sigma[r][2 * i + 0]];                            \
+        d = rotr64(d ^ a, 32);                                                 \
+        c = c + d;                                                             \
+        b = rotr64(b ^ c, 24);                                                 \
+        a = a + b + m[blake2b_sigma[r][2 * i + 1]];                            \
+        d = rotr64(d ^ a, 16);                                                 \
+        c = c + d;                                                             \
+        b = rotr64(b ^ c, 63);                                                 \
+    } while ((void)0, 0)
 
-  /* padding */
-  memset(state->buf + state->buflen, 0, BLAKE2B_BLOCKBYTES - state->buflen);
-  F(state, state->buf);
+#define ROUND(r)                                                               \
+    do {                                                                       \
+        G(r, 0, v[0], v[4], v[8], v[12]);                                      \
+        G(r, 1, v[1], v[5], v[9], v[13]);                                      \
+        G(r, 2, v[2], v[6], v[10], v[14]);                                     \
+        G(r, 3, v[3], v[7], v[11], v[15]);                                     \
+        G(r, 4, v[0], v[5], v[10], v[15]);                                     \
+        G(r, 5, v[1], v[6], v[11], v[12]);                                     \
+        G(r, 6, v[2], v[7], v[8], v[13]);                                      \
+        G(r, 7, v[3], v[4], v[9], v[14]);                                      \
+    } while ((void)0, 0)
 
-  /* Store back in little endian */
-  for (i = 0; i < 8; ++i) {
-    store64(buffer + sizeof(state->h[i]) * i, state->h[i]);
-  }
+    for (r = 0; r < 12; ++r) {
+        ROUND(r);
+    }
 
-  /* Copy first outlen bytes into output buffer */
-  memcpy(out, buffer, state->outlen);
+    for (i = 0; i < 8; ++i) {
+        S->h[i] = S->h[i] ^ v[i] ^ v[i + 8];
+    }
+
+#undef G
+#undef ROUND
 }
 
-/**
- * The main blake2b function
- *
- * @param      output  the hash output
- * @param[in]  outlen  the hash length
- * @param[in]  input   the message input
- * @param[in]  inlen   the message length
- * @param[in]  key     the key
- * @param[in]  keylen  the key length
- */
-void
-blake2b(void* output, size_t outlen, const void* input, size_t inlen,
-        const void* key, size_t keylen)
-{
-  blake2b_state state = {0};
+int blake2b_update(blake2b_state *S, const void *in, size_t inlen) {
+    const uint8_t *pin = (const uint8_t *)in;
 
-  blake2b_init(&state, outlen, key, keylen);
-  blake2b_update(&state, (const uint8_t*)input, inlen);
-  blake2b_final(&state, output, outlen);
+    if (inlen == 0) {
+        return 0;
+    }
+
+    /* Sanity check */
+    if (S == NULL || in == NULL) {
+        return -1;
+    }
+
+    /* Is this a reused state? */
+    if (S->f[0] != 0) {
+        return -1;
+    }
+
+    if (S->buflen + inlen > BLAKE2B_BLOCKBYTES) {
+        /* Complete current block */
+        size_t left = S->buflen;
+        size_t fill = BLAKE2B_BLOCKBYTES - left;
+        memcpy(&S->buf[left], pin, fill);
+        blake2b_increment_counter(S, BLAKE2B_BLOCKBYTES);
+        blake2b_compress(S, S->buf);
+        S->buflen = 0;
+        inlen -= fill;
+        pin += fill;
+        /* Avoid buffer copies when possible */
+        while (inlen > BLAKE2B_BLOCKBYTES) {
+            blake2b_increment_counter(S, BLAKE2B_BLOCKBYTES);
+            blake2b_compress(S, pin);
+            inlen -= BLAKE2B_BLOCKBYTES;
+            pin += BLAKE2B_BLOCKBYTES;
+        }
+    }
+    memcpy(&S->buf[S->buflen], pin, inlen);
+    S->buflen += (unsigned int)inlen;
+    return 0;
 }
 
+int blake2b_final(blake2b_state *S, void *out, size_t outlen) {
+    uint8_t buffer[BLAKE2B_OUTBYTES] = {0};
+    unsigned int i;
 
+    /* Sanity checks */
+    if (S == NULL || out == NULL || outlen < S->outlen) {
+        return -1;
+    }
+
+    /* Is this a reused state? */
+    if (S->f[0] != 0) {
+        return -1;
+    }
+
+    blake2b_increment_counter(S, S->buflen);
+    blake2b_set_lastblock(S);
+    memset(&S->buf[S->buflen], 0, BLAKE2B_BLOCKBYTES - S->buflen); /* Padding */
+    blake2b_compress(S, S->buf);
+
+    for (i = 0; i < 8; ++i) { /* Output full hash to temp buffer */
+        store64(buffer + sizeof(S->h[i]) * i, S->h[i]);
+    }
+
+    memcpy(out, buffer, S->outlen);
+    clear_internal_memory(buffer, sizeof(buffer));
+    clear_internal_memory(S->buf, sizeof(S->buf));
+    clear_internal_memory(S->h, sizeof(S->h));
+    return 0;
+}
+
+int blake2b(void *out, size_t outlen, const void *in, size_t inlen,
+            const void *key, size_t keylen) {
+    blake2b_state S;
+    int ret = -1;
+
+    /* Verify parameters */
+    if (NULL == in && inlen > 0) {
+        goto fail;
+    }
+
+    if (NULL == out || outlen == 0 || outlen > BLAKE2B_OUTBYTES) {
+        goto fail;
+    }
+
+    if ((NULL == key && keylen > 0) || keylen > BLAKE2B_KEYBYTES) {
+        goto fail;
+    }
+
+    if (keylen > 0) {
+        if (blake2b_init_key(&S, outlen, key, keylen) < 0) {
+            goto fail;
+        }
+    } else {
+        if (blake2b_init(&S, outlen) < 0) {
+            goto fail;
+        }
+    }
+
+    if (blake2b_update(&S, in, inlen) < 0) {
+        goto fail;
+    }
+    ret = blake2b_final(&S, out, outlen);
+
+fail:
+    clear_internal_memory(&S, sizeof(S));
+    return ret;
+}
+
+/* Argon2 Team - Begin Code */
 int blake2b_long(void *pout, size_t outlen, const void *in, size_t inlen) {
     uint8_t *out = (uint8_t *)pout;
     blake2b_state blake_state;
     uint8_t outlen_bytes[sizeof(uint32_t)] = {0};
     int ret = -1;
-    uint8_t key[] = {};
 
     if (outlen > UINT32_MAX) {
-        clear_internal_memory(&blake_state, sizeof(blake_state));
-        return ret;
+        goto fail;
     }
+
+    /* Ensure little-endian byte order! */
     store32(outlen_bytes, (uint32_t)outlen);
 
+#define TRY(statement)                                                         \
+    do {                                                                       \
+        ret = statement;                                                       \
+        if (ret < 0) {                                                         \
+            goto fail;                                                         \
+        }                                                                      \
+    } while ((void)0, 0)
+
     if (outlen <= BLAKE2B_OUTBYTES) {
-        blake2b_init(&blake_state, outlen,  key , 0);
-        blake2b_update(&blake_state, outlen_bytes, sizeof(outlen_bytes));
-        blake2b_update(&blake_state, in, inlen);
-        blake2b_final(&blake_state, out, outlen);
+        TRY(blake2b_init(&blake_state, outlen));
+        TRY(blake2b_update(&blake_state, outlen_bytes, sizeof(outlen_bytes)));
+        TRY(blake2b_update(&blake_state, in, inlen));
+        TRY(blake2b_final(&blake_state, out, outlen));
     } else {
         uint32_t toproduce;
         uint8_t out_buffer[BLAKE2B_OUTBYTES];
         uint8_t in_buffer[BLAKE2B_OUTBYTES];
-        blake2b_init(&blake_state, BLAKE2B_OUTBYTES, key , 0);
-        blake2b_update(&blake_state, outlen_bytes, sizeof(outlen_bytes));
-        blake2b_update(&blake_state, in, inlen);
-        blake2b_final(&blake_state, out_buffer, BLAKE2B_OUTBYTES);
+        TRY(blake2b_init(&blake_state, BLAKE2B_OUTBYTES));
+        TRY(blake2b_update(&blake_state, outlen_bytes, sizeof(outlen_bytes)));
+        TRY(blake2b_update(&blake_state, in, inlen));
+        TRY(blake2b_final(&blake_state, out_buffer, BLAKE2B_OUTBYTES));
         memcpy(out, out_buffer, BLAKE2B_OUTBYTES / 2);
         out += BLAKE2B_OUTBYTES / 2;
         toproduce = (uint32_t)outlen - BLAKE2B_OUTBYTES / 2;
 
         while (toproduce > BLAKE2B_OUTBYTES) {
             memcpy(in_buffer, out_buffer, BLAKE2B_OUTBYTES);
-            blake2b(out_buffer, BLAKE2B_OUTBYTES, in_buffer,
-                        BLAKE2B_OUTBYTES, NULL, 0);
+            TRY(blake2b(out_buffer, BLAKE2B_OUTBYTES, in_buffer,
+                        BLAKE2B_OUTBYTES, NULL, 0));
             memcpy(out, out_buffer, BLAKE2B_OUTBYTES / 2);
             out += BLAKE2B_OUTBYTES / 2;
             toproduce -= BLAKE2B_OUTBYTES / 2;
         }
 
         memcpy(in_buffer, out_buffer, BLAKE2B_OUTBYTES);
-        blake2b(out_buffer, toproduce, in_buffer, BLAKE2B_OUTBYTES, NULL,
-                    0);
+        TRY(blake2b(out_buffer, toproduce, in_buffer, BLAKE2B_OUTBYTES, NULL,
+                    0));
         memcpy(out, out_buffer, toproduce);
     }
+fail:
+    clear_internal_memory(&blake_state, sizeof(blake_state));
+    return ret;
+#undef TRY
 }
