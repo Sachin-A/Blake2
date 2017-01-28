@@ -29,15 +29,16 @@ void hashtest(uint32_t version, uint32_t t, uint32_t m, uint32_t p, char *pwd,
 
     ret = argon2_hash(t, 1 << m, p, pwd, strlen(pwd), salt, strlen(salt), out,
                       OUT_LEN, encoded, ENCODED_LEN, Argon2_i, version);
-    printf("%d", ret);
+    printf("ret:%d\n", ret);
     //assert(ret == ARGON2_OK);
 
+    printf("out[]:");
     for (i = 0; i < OUT_LEN; ++i)
         sprintf((char *)(hex_out + i * 2), "%02x", out[i]);
-
+    printf("\n");
    // for(i=0 ;i<OUT_LEN; ++i)
-    printf("%s\n", hexref);
-    printf("%s\n", hex_out);
+    printf("hexref:%s\n", hexref);
+    printf("hex_out:%s\n", hex_out);
     printf("%d" , memcmp(hex_out, hexref, OUT_LEN * 2));
 
     if (ARGON2_VERSION_NUMBER == version) {
@@ -72,7 +73,7 @@ int main() {
             "$argon2i$m=1048576,t=2,p=1$c29tZXNhbHQ"
             "$lpDsVdKNPtMlYvLnPqYrArAYdXZDoq5ueVKEWd6BBuk");
 #endif*/
-    hashtest(version, 2, 18, 1, "password", "somesalt",
+    hashtest(version, 2, 18, 1, "pass", "somesalt",
              "3e689aaa3d28a77cf2bc72a51ac53166761751182f1ee292e3f677a7da4c2467",
              "$argon2i$m=262144,t=2,p=1$c29tZXNhbHQ"
              "$Pmiaqj0op3zyvHKlGsUxZnYXURgvHuKS4/Z3p9pMJGc");

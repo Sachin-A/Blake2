@@ -574,7 +574,7 @@ void copy_block(block *dst, const block *src)
 
 void xor_block(block *dst, const block *src) 
 {
-    size_t i;
+    int i;
     for (i = 0; i < ARGON2_QWORDS_IN_BLOCK; ++i) {
         dst->v[i] ^= src->v[i];
     }
@@ -583,7 +583,7 @@ void xor_block(block *dst, const block *src)
 
 static void load_block(block *dst, const void *input) 
 {
-    size_t i;
+    int i;
     for (i = 0; i < ARGON2_QWORDS_IN_BLOCK; ++i) {
         load64((const uint8_t *)input + i * sizeof(dst->v[i]));
     }
@@ -591,7 +591,7 @@ static void load_block(block *dst, const void *input)
 
 static void store_block(void *output, const block *src) 
 {
-    size_t i;
+    int i;
     for (i = 0; i < ARGON2_QWORDS_IN_BLOCK; ++i) {
         store64((uint8_t *)output + i * sizeof(src->v[i]), src->v[i]);
     }
@@ -726,7 +726,7 @@ void finalize(const argon2_context *context, argon2_instance_t *instance)
         
         block blockhash;
         uint32_t l;
-        int32_t last_block_in_lane ;
+        uint32_t last_block_in_lane ;
         uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
 
         copy_block(&blockhash, instance->memory + instance->lane_length - 1);
@@ -899,7 +899,7 @@ int fill_memory_blocks(argon2_instance_t *instance)
         if (thr_data != NULL) {
             free(thr_data);
         }
-        return  ARGON2_THREAD_FAIL;
+        return ARGON2_THREAD_FAIL;
     }
 
     /**
@@ -1039,7 +1039,6 @@ void initial_hash(uint8_t *blockhash, argon2_context *context, argon2_type type)
 {
     blake2b_state BlakeHash;
     uint8_t value[sizeof(uint32_t)];
-    uint8_t key[] = {};
 
     if (NULL == context || NULL == blockhash) {
         return;
@@ -1143,6 +1142,3 @@ int initialize(argon2_instance_t *instance, argon2_context *context)
     clear_internal_memory(blockhash, ARGON2_PREHASH_SEED_LENGTH);
     return ARGON2_OK;
 }
-
-
-
