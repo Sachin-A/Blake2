@@ -255,6 +255,7 @@ static const char *decode_decimal(const char *str, unsigned long *v) {
     return str;
 }
 
+
 /**
  * Decodes an Argon2 hash string into the provided structure 'ctx'.
  * The only fields that must be set prior to this call are ctx.saltlen and
