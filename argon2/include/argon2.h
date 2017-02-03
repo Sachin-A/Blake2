@@ -5,10 +5,6 @@
 #include <stddef.h>
 #include <limits.h>
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 /* TODO */
 /* Argon2 Input Restrictions */
 
@@ -398,9 +394,5 @@ const char *argon2_error_message(int error_code);
 size_t argon2_encodedlen(uint32_t t_cost, uint32_t m_cost,
                                        uint32_t parallelism, uint32_t saltlen,
                                        uint32_t hashlen, argon2_type type);
-
-#if defined(__cplusplus)
-}
-#endif 
 
 #endif

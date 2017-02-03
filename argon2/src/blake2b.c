@@ -341,34 +341,37 @@ int blake2b(void *out, size_t outlen, const void *in, size_t inlen,
 
     /* Verify parameters */
     if (NULL == in && inlen > 0) {
-        goto fail;
+        clear_internal_memory(&S, sizeof(S));
+        return ret;
     }
 
     if (NULL == out || outlen == 0 || outlen > BLAKE2B_OUTBYTES) {
-        goto fail;
+        clear_internal_memory(&S, sizeof(S));
+       return ret;
     }
 
     if ((NULL == key && keylen > 0) || keylen > BLAKE2B_KEYBYTES) {
-        goto fail;
+        clear_internal_memory(&S, sizeof(S));
+        return ret;
     }
 
     if (keylen > 0) {
         if (blake2b_init_key(&S, outlen, key, keylen) < 0) {
-            goto fail;
+                clear_internal_memory(&S, sizeof(S));
+                return ret;
         }
     } else {
         if (blake2b_init(&S, outlen) < 0) {
-            goto fail;
+                clear_internal_memory(&S, sizeof(S));
+                return ret;
         }
     }
 
     if (blake2b_update(&S, in, inlen) < 0) {
-        goto fail;
+            clear_internal_memory(&S, sizeof(S));
+            return ret;
     }
     ret = blake2b_final(&S, out, outlen);
-
-fail:
-    clear_internal_memory(&S, sizeof(S));
     return ret;
 }
 
@@ -380,7 +383,8 @@ int blake2b_long(void *pout, size_t outlen, const void *in, size_t inlen) {
     int ret = -1;
 
     if (outlen > UINT32_MAX) {
-        goto fail;
+        clear_internal_memory(&blake_state, sizeof(blake_state));
+        return ret;
     }
 
     /* Ensure little-endian byte order! */
@@ -390,7 +394,8 @@ int blake2b_long(void *pout, size_t outlen, const void *in, size_t inlen) {
     do {                                                                       \
         ret = statement;                                                       \
         if (ret < 0) {                                                         \
-            goto fail;                                                         \
+            clear_internal_memory(&blake_state, sizeof(blake_state));          \
+            return ret;                                                        \
         }                                                                      \
     } while ((void)0, 0)
 
@@ -425,8 +430,5 @@ int blake2b_long(void *pout, size_t outlen, const void *in, size_t inlen) {
                     0));
         memcpy(out, out_buffer, toproduce);
     }
-fail:
-    clear_internal_memory(&blake_state, sizeof(blake_state));
-    return ret;
 #undef TRY
 }

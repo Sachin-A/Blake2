@@ -3,10 +3,6 @@
 
 #include "argon2.h"
 #include <pthread.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdlib.h>
 
 enum argon2_core_constants {
     ARGON2_BLOCK_SIZE = 1024,

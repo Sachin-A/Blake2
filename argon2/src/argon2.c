@@ -252,7 +252,10 @@ int argon2_verify(const char *encoded, const void *pwd, const size_t pwdlen,
     ctx.out = malloc(ctx.outlen);
     if (!ctx.salt || !ctx.out) {
         ret = ARGON2_MEMORY_ALLOCATION_ERROR;
-        goto fail;
+        free(ctx.salt);
+        free(ctx.out);
+        free(desired_result);
+        return ret;
     }
 
     ctx.pwd = (uint8_t *)pwd;
@@ -260,7 +263,10 @@ int argon2_verify(const char *encoded, const void *pwd, const size_t pwdlen,
 
     ret = decode_string(&ctx, encoded, type);
     if (ret != ARGON2_OK) {
-        goto fail;
+        free(ctx.salt);
+        free(ctx.out);
+        free(desired_result);
+        return ret;
     }
 
     /* Set aside the desired result, and get a new buffer. */
@@ -268,19 +274,24 @@ int argon2_verify(const char *encoded, const void *pwd, const size_t pwdlen,
     ctx.out = malloc(ctx.outlen);
     if (!ctx.out) {
         ret = ARGON2_MEMORY_ALLOCATION_ERROR;
-        goto fail;
+        free(ctx.salt);
+        free(ctx.out);
+        free(desired_result);
+
+    return ret;
     }
 
     ret = argon2_verify_ctx(&ctx, (char *)desired_result, type);
     if (ret != ARGON2_OK) {
-        goto fail;
+        free(ctx.salt);
+        free(ctx.out);
+        free(desired_result);
+        return ret;
     }
 
-fail:
     free(ctx.salt);
     free(ctx.out);
     free(desired_result);
-
     return ret;
 }
 
