@@ -28,27 +28,16 @@ void hashtest(uint32_t version, uint32_t t, uint32_t m, uint32_t p, char *pwd,
            t, m, p, pwd, salt);
 
     ret = argon2_hash(t, 1 << m, p, pwd, strlen(pwd), salt, strlen(salt), out, OUT_LEN, encoded, ENCODED_LEN, Argon2_i, version);
-    printf("ret:%d\n", ret);
-    //assert(ret == ARGON2_OK);
-
-    printf("out[]:");
-    for (i = 0; i < OUT_LEN; ++i)
-        sprintf((char *)(hex_out + i * 2), "%02x", out[i]);
-    printf("\n");
-   // for(i=0 ;i<OUT_LEN; ++i)
-    printf("hexref:%s\n", hexref);
-    printf("hex_out:%s\n", hex_out);
-    printf("%d" , memcmp(hex_out, hexref, OUT_LEN * 2));
+    assert(ret == ARGON2_OK);
 
     if (ARGON2_VERSION_NUMBER == version) {
-        //assert(memcmp(encoded, mcfref, strlen(mcfref)) == 0);
+        assert(memcmp(encoded, mcfref, strlen(mcfref)) == 0);
     }
 
     ret = argon2_verify(encoded, pwd, strlen(pwd), Argon2_i);
-    //assert(ret == ARGON2_OK);
+    assert(ret == ARGON2_OK);
     ret = argon2_verify(mcfref, pwd, strlen(pwd), Argon2_i);
-    //assert(ret == ARGON2_OK);
-
+    assert(ret == ARGON2_OK);
     printf("PASS\n");
 }
 
@@ -62,17 +51,12 @@ int main() {
     printf("Test Argon2i version number: %02x\n", version);
 
     /* Multiple test cases for various input values */
-   /* hashtest(version, 2, 16, 1, "password", "somesalt",
+    hashtest(version, 2, 16, 1, "password", "somesalt",
              "f6c4db4a54e2a370627aff3db6176b94a2a209a62c8e36152711802f7b30c694",
              "$argon2i$m=65536,t=2,p=1$c29tZXNhbHQ"
              "$9sTbSlTio3Biev89thdrlKKiCaYsjjYVJxGAL3swxpQ");
-#ifdef TEST_LARGE_RAM
-    hashtest(version, 2, 20, 1, "password", "somesalt",  
-            "9690ec55d28d3ed32562f2e73ea62b02b018757643a2ae6e79528459de8106e9",
-            "$argon2i$m=1048576,t=2,p=1$c29tZXNhbHQ"
-            "$lpDsVdKNPtMlYvLnPqYrArAYdXZDoq5ueVKEWd6BBuk");
-#endif*/
-    hashtest(version, 2, 18, 1, "pass", "somesalt",
+
+    hashtest(version, 2, 18, 1, "password", "somesalt",
              "3e689aaa3d28a77cf2bc72a51ac53166761751182f1ee292e3f677a7da4c2467",
              "$argon2i$m=262144,t=2,p=1$c29tZXNhbHQ"
              "$Pmiaqj0op3zyvHKlGsUxZnYXURgvHuKS4/Z3p9pMJGc");
@@ -110,12 +94,6 @@ int main() {
              "c1628832147d9720c5bd1cfd61367078729f6dfb6f8fea9ff98158e0d7816ed0",
              "$argon2i$v=19$m=65536,t=2,p=1$c29tZXNhbHQ"
              "$wWKIMhR9lyDFvRz9YTZweHKfbftvj+qf+YFY4NeBbtA");
-#ifdef TEST_LARGE_RAM
-    hashtest(version, 2, 20, 1, "password", "somesalt",  
-             "d1587aca0922c3b5d6a83edab31bee3c4ebaef342ed6127a55d19b2351ad1f41",
-             "$argon2i$v=19$m=1048576,t=2,p=1$c29tZXNhbHQ"  
-             "$0Vh6ygkiw7XWqD7asxvuPE667zQu1hJ6VdGbI1GtH0E");  
-#endif
     hashtest(version, 2, 18, 1, "password", "somesalt",
              "296dbae80b807cdceaad44ae741b506f14db0959267b183b118f9b24229bc7cb",
              "$argon2i$v=19$m=262144,t=2,p=1$c29tZXNhbHQ"

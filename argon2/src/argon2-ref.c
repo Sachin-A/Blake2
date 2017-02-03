@@ -6,48 +6,42 @@
 #include "argon2-ref.h"
 #include "blake2b.h"
 
-#define MULT64(x , y) ( 2 * ( x & UINT64_C(0xFFFFFFFF) ) * ( y & UINT64_C(0xFFFFFFFF) ) );
+static uint64_t fBlaMka(uint64_t x, uint64_t y) {
+    const uint64_t m = UINT64_C(0xFFFFFFFF);
+    const uint64_t xy = (x & m) * (y & m);
+    return x + y + 2 * xy;
+}
 
-/**
- * Helper macro to perform rotation in a 64 bit int
- *
- * @param[in]  w     original word
- * @param[in]  c     offset to rotate by
- */
-#define ROTR64(w, c) ((w) >> (c)) | ((w) << (64 - (c)))
-
-/**
- * The blake2 mixing function like macro mixes two 8-byte words from the message
- * into the hash state
- *
- * @params  a, b, c, d  indices to 8-byte word entries from the work vector V
- */
+static uint64_t rotr64(const uint64_t w, const unsigned c) {
+    return (w >> c) | (w << (64 - c));
+}
 
 #define G(a, b, c, d)                                                          \
     do {                                                                       \
-        a = a + b + MULT64(a,b);                                               \
-        d = ROTR64(d ^ a, 32);                                                 \
-        c = c + d + MULT64(c,d);                                               \
-        b = ROTR64(b ^ c, 24);                                                 \
-        a = a + b + MULT64(a,b);                                               \
-        d = ROTR64(d ^ a, 16);                                                 \
-        c = c + d + MULT64(c,d);                                               \
-        b = ROTR64(b ^ c, 63);                                                 \
-    } while (0)
+        a = fBlaMka(a, b);                                                     \
+        d = rotr64(d ^ a, 32);                                                 \
+        c = fBlaMka(c, d);                                                     \
+        b = rotr64(b ^ c, 24);                                                 \
+        a = fBlaMka(a, b);                                                     \
+        d = rotr64(d ^ a, 16);                                                 \
+        c = fBlaMka(c, d);                                                     \
+        b = rotr64(b ^ c, 63);                                                 \
+    } while ((void)0, 0)
 
-#define BLAKE2_ROUND(v0, v1, v2, v3, v4, v5, v6, v7, v8,					   \
-					 v9, v10, v11, v12, v13, v14, v15)  					   \
-					 							                               \
+#define BLAKE2_ROUND(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11,         \
+                           v12, v13, v14, v15)                                 \
     do {                                                                       \
-        G(v0, v4, v8,  v12);                                                   \
-        G(v1, v5, v9,  v13);                                                   \
+        G(v0, v4, v8, v12);                                                    \
+        G(v1, v5, v9, v13);                                                    \
         G(v2, v6, v10, v14);                                                   \
         G(v3, v7, v11, v15);                                                   \
         G(v0, v5, v10, v15);                                                   \
         G(v1, v6, v11, v12);                                                   \
-        G(v2, v7, v8,  v13);                                                   \
-        G(v3, v4, v9,  v14);                                                   \
-    } while (0)
+        G(v2, v7, v8, v13);                                                    \
+        G(v3, v4, v9, v14);                                                    \
+    } while ((void)0, 0)
+
+
 
 /**
  * Function fills a new memory block and optionally XORs the old block over the new one.
@@ -92,13 +86,17 @@ void fill_block(const block *prev_block, const block *ref_block, block *next_blo
      */
     
     for (i = 0; i < 8; ++i) {
-        
+
         BLAKE2_ROUND(blockR.v[16 * i], blockR.v[16 * i + 1] , blockR.v[16 * i + 2] ,
             	blockR.v[16 * i + 3] , blockR.v[16 * i + 4] , blockR.v[16 * i + 5] ,
            		blockR.v[16 * i + 6] , blockR.v[16 * i + 7] , blockR.v[16 * i + 8] ,
             	blockR.v[16 * i + 9] , blockR.v[16 * i + 10], blockR.v[16 * i + 11],
            		blockR.v[16 * i + 12], blockR.v[16 * i + 13], blockR.v[16 * i + 14],
            		blockR.v[16 * i + 15]);
+        /*  int j;
+         for (j = 0; j < 16; ++j)
+                printf("fill_block %.4u [%3u]: %016" PRIx64 "\n", i, j,
+                       blockR.v[16 * i + j]);*/
     }
 
     /** 
@@ -137,7 +135,6 @@ static void next_addresses(block *address_block, block *input_block, const block
 
 void fill_segment(const argon2_instance_t *instance, argon2_position_t position)
 {
-    
     block *ref_block = NULL, *curr_block = NULL;
     block address_block, input_block, zero_block;
     

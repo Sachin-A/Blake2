@@ -582,11 +582,10 @@ void xor_block(block *dst, const block *src)
 }
 
 
-static void load_block(block *dst, const void *input) 
-{
-    int i;
+static void load_block(block *dst, const void *input) {
+    unsigned i;
     for (i = 0; i < ARGON2_QWORDS_IN_BLOCK; ++i) {
-        load64((const uint8_t *)input + i * sizeof(dst->v[i]));
+        dst->v[i] = load64((const uint8_t *)input + i * sizeof(dst->v[i]));
     }
 }
 
@@ -708,58 +707,6 @@ void clear_internal_memory(void *v, size_t n)
     secure_wipe_memory(v, n);
   }
 }
-
-/**
- * XORing the last block of each lane, hashing it, making the tag. Deallocates
- * the memory.
- * @param context Pointer to current Argon2 context (use only the out parameters
- * from it)
- * @param instance Pointer to current instance of Argon2
- * @pre instance->state must point to necessary amount of memory
- * @pre context->out must point to outlen bytes of memory
- * @pre if context->free_cbk is not NULL, it should point to a function that
- * deallocates memory
- */
-
-void finalize(const argon2_context *context, argon2_instance_t *instance) 
-{
-    if (context != NULL && instance != NULL) {
-        
-        block blockhash;
-        uint32_t l;
-        uint32_t last_block_in_lane ;
-        uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
-
-        copy_block(&blockhash, instance->memory + instance->lane_length - 1);
-
-        /** 
-         * XOR the last blocks 
-         */
-
-        for (l = 1; l < instance->lanes; ++l) {
-            last_block_in_lane =  l * instance->lane_length + (instance->lane_length - 1);
-            xor_block(&blockhash, instance->memory + last_block_in_lane);
-        }
-
-        /**
-         * Hash the result 
-         */
-        
-        store_block(blockhash_bytes, &blockhash);
-        blake2b_long(context->out, context->outlen, blockhash_bytes,
-                         ARGON2_BLOCK_SIZE);
-        /**
-         * clear blockhash and blockhash_bytes 
-         */
-        
-        clear_internal_memory(blockhash.v, ARGON2_BLOCK_SIZE);
-        clear_internal_memory(blockhash_bytes, ARGON2_BLOCK_SIZE);
-
-        free_memory(context, (uint8_t *)instance->memory,
-                    instance->memory_blocks, sizeof(block));
-    }
-}
-
 
 /**
  * Computes absolute position of reference block in the lane following a skewed
@@ -886,115 +833,79 @@ static void *fill_segment_thr(void *thread_data)
  */
 
 
-int fill_memory_blocks(argon2_instance_t *instance) 
-{
+int fill_memory_blocks(argon2_instance_t *instance) {
     uint32_t r, s;
     argon2_thread_handle_t *thread = NULL;
     argon2_thread_data *thr_data = NULL;
-    uint32_t l;
+    int rc = ARGON2_OK;
 
-    if (NULL == instance || 0 == instance->lanes) {
-        if (thread != NULL) {
-            free(thread);
-        }
-        if (thr_data != NULL) {
-            free(thr_data);
-        }
-        return ARGON2_THREAD_FAIL;
+    if (instance == NULL || instance->lanes == 0) {
+        rc = ARGON2_THREAD_FAIL;
+        goto fail;
     }
 
-    /**
-     * Allocating space for threads 
-     */
-
+    /* 1. Allocating space for threads */
     thread = calloc(instance->lanes, sizeof(argon2_thread_handle_t));
-    if (NULL == thread) {
-        if (thr_data != NULL) {
-            free(thr_data);
-        }
-        return ARGON2_MEMORY_ALLOCATION_ERROR;
+    if (thread == NULL) {
+        rc = ARGON2_MEMORY_ALLOCATION_ERROR;
+        goto fail;
     }
 
     thr_data = calloc(instance->lanes, sizeof(argon2_thread_data));
-    if (NULL == thr_data) {
-        if (thread != NULL) {
-            free(thread);
-        }   
-        return ARGON2_MEMORY_ALLOCATION_ERROR;
+    if (thr_data == NULL) {
+        rc = ARGON2_MEMORY_ALLOCATION_ERROR;
+        goto fail;
     }
 
     for (r = 0; r < instance->passes; ++r) {
         for (s = 0; s < ARGON2_SYNC_POINTS; ++s) {
-            
-            /**
-             * Calling threads 
-             */
-            
+            uint32_t l;
+
+            /* 2. Calling threads */
             for (l = 0; l < instance->lanes; ++l) {
                 argon2_position_t position;
-
-                /** 
-                 * Join a thread if limit is exceeded 
-                 */
-
                 if (l >= instance->threads) {
                     if (argon2_thread_join(thread[l - instance->threads])) {
-                        if (thread != NULL) {
-                            free(thread);
-                        }
-                        if (thr_data != NULL) {
-                            free(thr_data);
-                        }
-                        return ARGON2_THREAD_FAIL;
+                        rc = ARGON2_THREAD_FAIL;
+                        goto fail;
                     }
                 }
 
-                /** 
-                 * Create thread 
-                 */
                 position.pass = r;
                 position.lane = l;
                 position.slice = (uint8_t)s;
                 position.index = 0;
-                thr_data[l].instance_ptr = instance; /* preparing the thread input */
-                memcpy(&(thr_data[l].pos), &position, sizeof(argon2_position_t));
-                
-                if (argon2_thread_create(&thread[l], &fill_segment_thr, (void *)&thr_data[l])) {
-                    if (thread != NULL) {
-                        free(thread);
-                    }
-                    if (thr_data != NULL) {
-                        free(thr_data);
-                    }
-                    return ARGON2_THREAD_FAIL;
+                thr_data[l].instance_ptr =
+                    instance; 
+                memcpy(&(thr_data[l].pos), &position,
+                       sizeof(argon2_position_t));
+                if (argon2_thread_create(&thread[l], &fill_segment_thr,
+                                         (void *)&thr_data[l])) {
+                    rc = ARGON2_THREAD_FAIL;
+                    goto fail;
                 }
             }
 
-            /**
-             * Joining remaining threads 
-             */
-            for (l = instance->lanes - instance->threads; l < instance->lanes; ++l) {
+            /* 3. Joining remaining threads */
+            for (l = instance->lanes - instance->threads; l < instance->lanes;
+                 ++l) {
                 if (argon2_thread_join(thread[l])) {
-                    if (thread != NULL) {
-                        free(thread);
-                    }
-                    if (thr_data != NULL) {
-                        free(thr_data);
-                    }
-                    return ARGON2_THREAD_FAIL;
+                    rc = ARGON2_THREAD_FAIL;
+                    goto fail;
                 }
             }
         }
     }
+
+fail:
     if (thread != NULL) {
         free(thread);
     }
     if (thr_data != NULL) {
         free(thr_data);
     }
-    return ARGON2_OK;
+    return rc;
 }
-
 /**
  * Function creates first 2 blocks per lane
  * @param instance Pointer to the current instance
@@ -1005,7 +916,7 @@ int fill_memory_blocks(argon2_instance_t *instance)
 void fill_first_blocks(uint8_t *blockhash, const argon2_instance_t *instance) 
 {
     uint32_t l;
-
+    uint32_t i ,j ;
     uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
     
     for (l = 0; l < instance->lanes; ++l) {
@@ -1014,14 +925,21 @@ void fill_first_blocks(uint8_t *blockhash, const argon2_instance_t *instance)
         store32(blockhash + ARGON2_PREHASH_DIGEST_LENGTH + 4, l);
         blake2b_long(blockhash_bytes, ARGON2_BLOCK_SIZE, blockhash,
                      ARGON2_PREHASH_SEED_LENGTH);
+
+       
         load_block(&instance->memory[l * instance->lane_length + 0],
                    blockhash_bytes);
+
+
+
 
         store32(blockhash + ARGON2_PREHASH_DIGEST_LENGTH, 1);
         blake2b_long(blockhash_bytes, ARGON2_BLOCK_SIZE, blockhash,
                      ARGON2_PREHASH_SEED_LENGTH);
+
         load_block(&instance->memory[l * instance->lane_length + 1],
                    blockhash_bytes);
+
     }
     clear_internal_memory(blockhash_bytes, ARGON2_BLOCK_SIZE);
 }
@@ -1139,7 +1057,62 @@ int initialize(argon2_instance_t *instance, argon2_context *context)
     clear_internal_memory(blockhash + ARGON2_PREHASH_DIGEST_LENGTH,
                           ARGON2_PREHASH_SEED_LENGTH -
                               ARGON2_PREHASH_DIGEST_LENGTH);
+
     fill_first_blocks(blockhash, instance);
     clear_internal_memory(blockhash, ARGON2_PREHASH_SEED_LENGTH);
     return ARGON2_OK;
 }
+
+
+/**
+ * XORing the last block of each lane, hashing it, making the tag. Deallocates
+ * the memory.
+ * @param context Pointer to current Argon2 context (use only the out parameters
+ * from it)
+ * @param instance Pointer to current instance of Argon2
+ * @pre instance->state must point to necessary amount of memory
+ * @pre context->out must point to outlen bytes of memory
+ * @pre if context->free_cbk is not NULL, it should point to a function that
+ * deallocates memory
+ */
+
+void finalize(const argon2_context *context, argon2_instance_t *instance) 
+{
+    if (context != NULL && instance != NULL) {
+        
+        block blockhash;
+        uint32_t l;
+        uint32_t last_block_in_lane;
+   
+
+        copy_block(&blockhash, instance->memory + instance->lane_length - 1);
+
+        /** 
+         * XOR the last blocks 
+         */
+
+        for (l = 1; l < instance->lanes; ++l) {
+            last_block_in_lane =  l * instance->lane_length + (instance->lane_length - 1);
+            xor_block(&blockhash, instance->memory + last_block_in_lane);
+        }
+
+        /**
+         * Hash the result 
+         */
+        {
+        uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
+        store_block(blockhash_bytes, &blockhash);
+        blake2b_long(context->out, context->outlen, blockhash_bytes,
+                         ARGON2_BLOCK_SIZE);
+        /**
+         * clear blockhash and blockhash_bytes 
+         */
+        
+        clear_internal_memory(blockhash.v, ARGON2_BLOCK_SIZE);
+        clear_internal_memory(blockhash_bytes, ARGON2_BLOCK_SIZE);
+    }
+        free_memory(context, (uint8_t *)instance->memory,
+                    instance->memory_blocks, sizeof(block));
+    }
+}
+

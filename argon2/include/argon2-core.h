@@ -3,6 +3,10 @@
 
 #include "argon2.h"
 #include <pthread.h>
+#include <stdio.h>
+#include <inttypes.h>
+#include <string.h>
+#include <stdlib.h>
 
 enum argon2_core_constants {
     ARGON2_BLOCK_SIZE = 1024,
@@ -88,11 +92,11 @@ void secure_wipe_memory(void *v, size_t n);
 void clear_internal_memory(void *v, size_t n);
 
 uint32_t index_alpha(const argon2_instance_t *instance, const argon2_position_t *position, uint32_t pseudo_rand, int same_lane);
-int validate_inputs(const argon2_context *context);
 void initial_hash(uint8_t *blockhash, argon2_context *context, argon2_type type);
 void fill_first_blocks(uint8_t *blockhash, const argon2_instance_t *instance);
 int initialize(argon2_instance_t *instance, argon2_context *context);
 void finalize(const argon2_context *context, argon2_instance_t *instance);
 int fill_memory_blocks(argon2_instance_t *instance);
+
 
 #endif /* ARGON2_CORE_H */

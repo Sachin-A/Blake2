@@ -58,7 +58,6 @@ int argon2_ctx(argon2_context *context, argon2_type type) {
      * blocks
      */
     result = initialize(&instance, context);
-
     if (ARGON2_OK != result) {
         return result;
     }
@@ -224,8 +223,7 @@ static int argon2_compare(const uint8_t *b1, const uint8_t *b2, size_t len)
 }
 
 int argon2_verify(const char *encoded, const void *pwd, const size_t pwdlen,
-                  argon2_type type) 
-{
+                  argon2_type type) {
 
     argon2_context ctx;
     uint8_t *desired_result = NULL;
