@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
 #ifndef ARGON2_CORE_H
 #define ARGON2_CORE_H
 
@@ -96,3 +100,7 @@ int fill_memory_blocks(argon2_instance_t *instance);
 
 
 #endif /* ARGON2_CORE_H */
+
+#ifdef __cplusplus
+}
+#endif

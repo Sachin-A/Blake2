@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef ARGON2_REF_H
 #define ARGON2_REF_H
 
@@ -11,3 +15,7 @@ void fill_segment(const argon2_instance_t *instance,
 				argon2_position_t position);
 
 #endif /* ARGON2_REF_H */
+
+#ifdef __cplusplus
+}
+#endif

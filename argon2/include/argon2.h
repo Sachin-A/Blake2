@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+  
 #ifndef ARGON2_H
 #define ARGON2_H
 
@@ -395,4 +399,8 @@ size_t argon2_encodedlen(uint32_t t_cost, uint32_t m_cost,
                                        uint32_t parallelism, uint32_t saltlen,
                                        uint32_t hashlen, argon2_type type);
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif

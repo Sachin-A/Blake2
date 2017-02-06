@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef BLAKE_H
 #define BLAKE_H
 
@@ -83,3 +87,8 @@ int blake2b_long(void *out, size_t outlen, const void *in, size_t inlen);
 /* Argon2 Team - End Code */
 
 #endif /* BLAKE_H */
+
+
+#ifdef __cplusplus
+}
+#endif
